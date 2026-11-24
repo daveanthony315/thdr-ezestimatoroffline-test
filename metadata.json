@@ -1,0 +1,8 @@
+{
+  "name": "THDR Estimator",
+  "description": "Offline-capable House DR room-by-room estimating app with editable Price Book, timeframe benchmarks, and construction material calculators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

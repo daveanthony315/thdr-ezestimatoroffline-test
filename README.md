@@ -1,17 +1,17 @@
-# THDR Personal Estimator PWA
+# THDR Estimator (Android)
 
-This is a separate, local-first copy of the standalone estimator. It does not replace the Base44 estimator or the public website.
+Native Android Kotlin and Jetpack Compose rewrite of the offline-first House DR EZ Estimator.
 
-## What stays on the device
+## Architecture & Persistence
 
-The estimator stores its editable price book and saved proposals in the browser's local storage. That data belongs to this browser profile and app address; it does not sync to Base44 or another phone. Export a price-book backup before moving the app to a different address.
+- **UI**: Jetpack Compose + Material 3 (`enableEdgeToEdge()`, adaptive `NavigationBar` / `NavigationRail`).
+- **Local Storage**: Room SQLite database (`thdr_estimator_db`) pre-seeded on first launch from `app/src/main/assets/pricebook_seed.json` (300 items across 12 categories) and `app/src/main/assets/timeframes_seed.json` (16 project timeframe benchmarks). All saved proposals and Price Book edits remain offline on the device.
+- **Backup & Printing**:
+  - Export and import full Price Book + Timeframe JSON backups via Android Storage Access Framework (`CreateDocument` / `OpenDocument`).
+  - Print or save customer-ready estimate proposals as PDF via Android `PrintManager`.
 
-## Local preview
+## Core Screens
 
-From this folder, run `python -m http.server 4176` and open `http://127.0.0.1:4176/` on the computer. This is only a local preview; that URL will not work on your phone.
-
-## Install on Android
-
-To install from Chrome, host this folder at a private HTTPS address, open it once while online, wait for the offline cache to finish, then choose **Install app** or **Add to Home screen**. The service worker caches the app shell for offline use after the first successful online visit.
-
-Do not host this folder publicly without access protection. It contains internal estimator and pricing logic. This starter is not yet a Play Store package and does not provide cloud backup or cross-device sync.
+1. **EZ Estimator**: Proposal metadata, saved local proposals, Interior/Exterior area workflows, room-by-room dimensions & measurements, service pricing pulled from the Price Book with manual quantity/rate overrides, consolidated project materials, discount/tax, internal cost & profit summary, and Print/Save PDF.
+2. **Price Book**: Searchable & filterable 300-item catalog with benchmark/low/high rate views, category-wide bulk editing, subcategory/hourly pricing editors, JSON backup export/import, and editable Project Timeframe Benchmarks.
+3. **Materials**: Consolidated project material takeoff, custom material entries, and 6 construction calculators (Concrete, CMU, Framing, Drywall, Paint, Flooring & Tile).

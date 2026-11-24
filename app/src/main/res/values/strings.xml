@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">THDR Estimator</string>
+    <string name="brand_title">EZ ESTIMATOR</string>
+    <string name="brand_subtitle">HOUSE DR · INTERIOR / EXTERIOR</string>
+    <string name="status_local_workspace">Local workspace</string>
+    <string name="status_estimate_saved">Estimate saved locally</string>
+    <string name="status_estimate_loaded">Proposal loaded for editing</string>
+    <string name="tab_estimate">EZ Estimator</string>
+    <string name="tab_pricebook">Price Book</string>
+    <string name="tab_materials">Materials</string>
+    <string name="nav_estimate">Estimate</string>
+    <string name="nav_pricebook">Price Book</string>
+    <string name="nav_materials">Materials</string>
+    <string name="estimate_intro">Build a room-by-room estimate. Service pricing, units, and rates are pulled from the saved Price Book and remain editable on each estimate.</string>
+    <string name="create_estimate_title">Create Estimate</string>
+    <string name="create_estimate_desc">Start a new estimate with a blank workspace.</string>
+    <string name="btn_create_estimate">+ Create Estimate</string>
+    <string name="saved_proposals_title">Saved Proposals</string>
+    <string name="saved_proposals_desc">Estimates saved on this device appear here.</string>
+    <string name="no_saved_proposals">No saved proposals yet.</string>
+    <string name="choose_estimate_area">Choose estimate area</string>
+    <string name="interior_label">INTERIOR</string>
+    <string name="exterior_label">EXTERIOR</string>
+    <string name="add_a_room">Add a room</string>
+    <string name="add_room_note">For multiple bedrooms, select Bedroom once for each bedroom.</string>
+    <string name="add_exterior_area">Add an exterior work area</string>
+    <string name="add_exterior_note">Choose the area type. Measurements and pricing units follow the selected service and Price Book.</string>
+    <string name="materials_needed_title">Materials Needed — Entire Project</string>
+    <string name="materials_needed_sub">One combined material list for every room in this estimate.</string>
+    <string name="materials_needed_empty">Choose services and enter measurements to calculate materials.</string>
+    <string name="estimate_summary_title">Estimate Summary</string>
+    <string name="customer_estimate_label">CUSTOMER ESTIMATE</string>
+    <string name="services_label">Services</string>
+    <string name="materials_extra_label">Materials / additional charges</string>
+    <string name="discount_label">Discount ($)</string>
+    <string name="tax_label">Tax (%)</string>
+    <string name="btn_save_estimate">Save estimate</string>
+    <string name="btn_print_pdf">Print / Save PDF</string>
+    <string name="accuracy_check_warning">Accuracy check: unknown conditions, unverified dimensions, structural work, and concealed damage should be verified on site before final pricing.</string>
+    <string name="pricebook_subtitle">THDR Price Book v3.0 · Fully editable service catalog and subcategories · labor-focused estimating database.</string>
+    <string name="pricebook_disclaimer">Rates shown are THDR working benchmarks normalized to the $85/hour labor rate. Materials, equipment, permits, and subcontractors are not automatically included.</string>
+    <string name="materials_subtitle">Consolidated project takeoff — drywall tape is estimated at 24 LF per 4x8 sheet, using the combined sheet count.</string>
+    <string name="calc_tools_title">Material Calculation Tools</string>
+    <string name="calc_tools_sub">Quantity calculators based on the Construction Materials Formulas Reference Guide. Results remain separate until added to project materials.</string>
+    <string name="calc_disclaimer">Quantities are planning estimates. Verify dimensions, structural details, product specifications, actual coverage, and site conditions before ordering.</string>
+</resources>

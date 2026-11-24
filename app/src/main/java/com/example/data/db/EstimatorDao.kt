@@ -86,6 +86,21 @@ interface EstimatorDao {
     @Query("DELETE FROM saved_estimates WHERE id = :id")
     suspend fun deleteSavedEstimateById(id: Long)
 
+    @Query("SELECT * FROM customers ORDER BY name COLLATE NOCASE ASC")
+    fun observeCustomers(): Flow<List<CustomerEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomer(customer: CustomerEntity): Long
+
+    @Query("DELETE FROM customers WHERE id = :id")
+    suspend fun deleteCustomerById(id: Long)
+
+    @Query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1")
+    fun observeAppSettings(): Flow<AppSettingsEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAppSettings(settings: AppSettingsEntity)
+
     @Transaction
     suspend fun renameCategoryTransaction(oldName: String, newName: String, description: String) {
         deleteCategoryByName(oldName)

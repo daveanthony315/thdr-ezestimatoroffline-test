@@ -193,9 +193,15 @@ object PriceBookJsonCodec {
 
     fun encodeEstimateDraft(draft: EstimateDraft, total: Double): String {
         val root = JSONObject()
+        root.put("docType", draft.docType.key)
+        draft.customerId?.let { root.put("customerId", it) }
         root.put("customer", draft.customer)
         root.put("project", draft.project)
         root.put("date", draft.date)
+        root.put("validUntil", draft.validUntil)
+        root.put("proposalStatus", draft.proposalStatus.key)
+        root.put("depositPercent", draft.depositPercentText)
+        root.put("termsText", draft.termsText)
         root.put("estimateSide", draft.estimateSide.key)
         root.put("discount", draft.discountText)
         root.put("tax", draft.taxText)
@@ -229,6 +235,8 @@ object PriceBookJsonCodec {
             room.serviceSelections.forEach { (svc, sel) ->
                 selObj.put(svc, JSONObject().apply {
                     put("selectedPbItemName", sel.selectedPbItemName)
+                    put("overrideUnit", sel.overrideUnit)
+                    put("overrideMeasurementBasis", sel.overrideMeasurementBasis)
                     put("quantity", sel.quantity)
                     put("quantityManual", sel.quantityManual)
                     put("rate", sel.rate)
@@ -274,6 +282,8 @@ object PriceBookJsonCodec {
                 selections[svc] = RoomServiceSelection(
                     serviceName = svc,
                     selectedPbItemName = sObj.optString("selectedPbItemName", ""),
+                    overrideUnit = sObj.optString("overrideUnit", ""),
+                    overrideMeasurementBasis = sObj.optString("overrideMeasurementBasis", ""),
                     quantity = sObj.optDouble("quantity", 0.0).finiteOrZero(),
                     quantityManual = sObj.optBoolean("quantityManual", false),
                     rate = sObj.optDouble("rate", 0.0).finiteOrZero(),
@@ -303,17 +313,87 @@ object PriceBookJsonCodec {
             )
         }
 
+        val customerIdVal = if (root.has("customerId")) root.optLong("customerId").takeIf { it > 0L } else null
         return EstimateDraft(
             id = id,
+            docType = com.example.model.DocumentType.fromKey(root.optString("docType", "estimate")),
+            customerId = customerIdVal,
             customer = root.optString("customer", ""),
             project = root.optString("project", ""),
             date = root.optString("date", ""),
+            validUntil = root.optString("validUntil", ""),
+            proposalStatus = com.example.model.ProposalStatus.fromKey(root.optString("proposalStatus", "draft")),
+            depositPercentText = root.optString("depositPercent", "25"),
+            termsText = root.optString("termsText", ""),
             estimateSide = EstimateSide.fromKey(root.optString("estimateSide", "interior")),
             detailsVisible = true,
             rooms = rooms,
             manualMaterials = manualMaterials,
             discountText = root.optString("discount", "0"),
             taxText = root.optString("tax", "0")
+        )
+    }
+
+    fun encodeAppSettings(settings: com.example.model.AppSettings): String {
+        return JSONObject().apply {
+            put("companyName", settings.companyName)
+            put("companyTagline", settings.companyTagline)
+            put("companyPhone", settings.companyPhone)
+            put("companyEmail", settings.companyEmail)
+            put("companyAddress", settings.companyAddress)
+            put("companyLicense", settings.companyLicense)
+            put("themePreset", settings.themePreset.key)
+            put("accentColor", settings.accentColor.key)
+            put("showBlueprintBackdrop", settings.showBlueprintBackdrop)
+            put("largeFieldText", settings.largeFieldText)
+            put("showInternalCostProfit", settings.showInternalCostProfit)
+            put("defaultHourlyRate", settings.defaultHourlyRate)
+            put("defaultTaxPercent", settings.defaultTaxPercent)
+            put("currencySymbol", settings.currencySymbol)
+            put("defaultEstimateSide", settings.defaultEstimateSide.key)
+            put("defaultFlooringWastePct", settings.defaultFlooringWastePct)
+            put("defaultPaintWastePct", settings.defaultPaintWastePct)
+            put("defaultDrywallWastePct", settings.defaultDrywallWastePct)
+            put("defaultTileWastePct", settings.defaultTileWastePct)
+            put("defaultRoofingWastePct", settings.defaultRoofingWastePct)
+            put("paintCoverageSqFtPerGal", settings.paintCoverageSqFtPerGal)
+            put("defaultProposalValidDays", settings.defaultProposalValidDays)
+            put("defaultProposalDepositPct", settings.defaultProposalDepositPct)
+            put("defaultProposalTerms", settings.defaultProposalTerms)
+            put("includeSignatureBlockOnProposal", settings.includeSignatureBlockOnProposal)
+        }.toString()
+    }
+
+    fun decodeAppSettings(jsonString: String): com.example.model.AppSettings {
+        val defaults = com.example.model.AppSettings()
+        if (jsonString.isBlank()) return defaults
+        val root = JSONObject(jsonString)
+        return com.example.model.AppSettings(
+            companyName = root.optString("companyName", defaults.companyName),
+            companyTagline = root.optString("companyTagline", defaults.companyTagline),
+            companyPhone = root.optString("companyPhone", defaults.companyPhone),
+            companyEmail = root.optString("companyEmail", defaults.companyEmail),
+            companyAddress = root.optString("companyAddress", defaults.companyAddress),
+            companyLicense = root.optString("companyLicense", defaults.companyLicense),
+            themePreset = com.example.model.AppThemePreset.fromKey(root.optString("themePreset", defaults.themePreset.key)),
+            accentColor = com.example.model.AppAccentColor.fromKey(root.optString("accentColor", defaults.accentColor.key)),
+            showBlueprintBackdrop = root.optBoolean("showBlueprintBackdrop", defaults.showBlueprintBackdrop),
+            largeFieldText = root.optBoolean("largeFieldText", defaults.largeFieldText),
+            showInternalCostProfit = root.optBoolean("showInternalCostProfit", defaults.showInternalCostProfit),
+            defaultHourlyRate = root.optDouble("defaultHourlyRate", defaults.defaultHourlyRate).finiteOrZero().takeIf { it > 0 } ?: defaults.defaultHourlyRate,
+            defaultTaxPercent = root.optDouble("defaultTaxPercent", defaults.defaultTaxPercent).finiteOrZero(),
+            currencySymbol = root.optString("currencySymbol", defaults.currencySymbol).ifBlank { "$" },
+            defaultEstimateSide = EstimateSide.fromKey(root.optString("defaultEstimateSide", defaults.defaultEstimateSide.key)),
+            defaultFlooringWastePct = root.optInt("defaultFlooringWastePct", defaults.defaultFlooringWastePct),
+            defaultPaintWastePct = root.optInt("defaultPaintWastePct", defaults.defaultPaintWastePct),
+            defaultDrywallWastePct = root.optInt("defaultDrywallWastePct", defaults.defaultDrywallWastePct),
+            defaultTileWastePct = root.optInt("defaultTileWastePct", defaults.defaultTileWastePct),
+            defaultRoofingWastePct = root.optInt("defaultRoofingWastePct", defaults.defaultRoofingWastePct),
+            paintCoverageSqFtPerGal = root.optDouble("paintCoverageSqFtPerGal", defaults.paintCoverageSqFtPerGal).finiteOrZero().takeIf { it > 0 } ?: defaults.paintCoverageSqFtPerGal,
+            defaultProposalValidDays = root.optInt("defaultProposalValidDays", defaults.defaultProposalValidDays),
+            defaultProposalDepositPct = root.optDouble("defaultProposalDepositPct", defaults.defaultProposalDepositPct).finiteOrZero(),
+            defaultProposalTerms = root.optString("defaultProposalTerms", defaults.defaultProposalTerms),
+            includeSignatureBlockOnProposal = root.optBoolean("includeSignatureBlockOnProposal", defaults.includeSignatureBlockOnProposal)
         )
     }
 

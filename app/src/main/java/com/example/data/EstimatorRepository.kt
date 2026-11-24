@@ -1,14 +1,20 @@
 package com.example.data
 
 import android.content.Context
+import com.example.data.db.AppSettingsEntity
+import com.example.data.db.CustomerEntity
 import com.example.data.db.EstimatorDao
 import com.example.data.db.PriceBookCategoryEntity
 import com.example.data.db.PriceBookItemEntity
 import com.example.data.db.SavedEstimateEntity
 import com.example.data.db.TimeframeEntity
 import com.example.domain.PriceBookJsonCodec
+import com.example.model.AppSettings
 import com.example.model.CategoryMeta
+import com.example.model.Customer
+import com.example.model.DocumentType
 import com.example.model.PriceBookItem
+import com.example.model.ProposalStatus
 import com.example.model.SavedProposal
 import com.example.model.TimeframeBenchmark
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +40,14 @@ class EstimatorRepository(
 
     val savedProposals: Flow<List<SavedProposal>> = dao.observeSavedEstimates().map { list ->
         list.map { it.toModel() }
+    }
+
+    val customers: Flow<List<Customer>> = dao.observeCustomers().map { list ->
+        list.map { it.toModel() }
+    }
+
+    val appSettings: Flow<AppSettings> = dao.observeAppSettings().map { entity ->
+        if (entity == null) AppSettings() else PriceBookJsonCodec.decodeAppSettings(entity.payloadJson)
     }
 
     suspend fun ensureSeeded() = withContext(Dispatchers.IO) {
@@ -97,6 +111,8 @@ class EstimatorRepository(
 
     suspend fun saveEstimate(
         existingId: Long?,
+        docType: DocumentType,
+        status: ProposalStatus,
         customer: String,
         project: String,
         date: String,
@@ -107,6 +123,8 @@ class EstimatorRepository(
         dao.insertSavedEstimate(
             SavedEstimateEntity(
                 id = existingId ?: 0L,
+                docType = docType.key,
+                status = status.key,
                 customer = customer,
                 project = project,
                 date = date,
@@ -119,6 +137,23 @@ class EstimatorRepository(
 
     suspend fun deleteSavedEstimate(id: Long) = withContext(Dispatchers.IO) {
         dao.deleteSavedEstimateById(id)
+    }
+
+    suspend fun saveCustomer(customer: Customer): Long = withContext(Dispatchers.IO) {
+        dao.insertCustomer(CustomerEntity.fromModel(customer))
+    }
+
+    suspend fun deleteCustomer(id: Long) = withContext(Dispatchers.IO) {
+        dao.deleteCustomerById(id)
+    }
+
+    suspend fun saveAppSettings(settings: AppSettings) = withContext(Dispatchers.IO) {
+        dao.upsertAppSettings(
+            AppSettingsEntity(
+                id = 1,
+                payloadJson = PriceBookJsonCodec.encodeAppSettings(settings)
+            )
+        )
     }
 
     suspend fun replaceBackup(

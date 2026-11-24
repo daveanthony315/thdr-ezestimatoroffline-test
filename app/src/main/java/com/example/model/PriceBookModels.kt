@@ -87,6 +87,56 @@ data class PriceBookItem(
         PriceViewMode.LOW -> lowUnitPrice
         PriceViewMode.HIGH -> highUnitPrice
     }
+    fun unitPricePresetsFor(unit: String): List<UnitPricePreset> {
+        val list = mutableListOf<UnitPricePreset>()
+        val isHr = unit.equals("HR", ignoreCase = true)
+        val sameAsItem = unit.equals(this.unit, ignoreCase = true)
+        if (isHr) {
+            val hr = if (hourlyRate > 0.0) hourlyRate else 85.0
+            list.add(UnitPricePreset("Hourly", hr))
+            if (laborRate > 0.0 && laborRate != hr) {
+                list.add(UnitPricePreset("Labor", laborRate))
+            }
+            if (minimumLaborCharge > 0.0) {
+                list.add(UnitPricePreset("Min charge", minimumLaborCharge))
+            }
+        } else {
+            val scale = if (this.unit.equals("SF", ignoreCase = true) && unit.equals("SQ", ignoreCase = true)) {
+                100.0
+            } else if (this.unit.equals("SQ", ignoreCase = true) && unit.equals("SF", ignoreCase = true)) {
+                0.01
+            } else {
+                1.0
+            }
+            if (sameAsItem || scale != 1.0) {
+                if (lowUnitPrice > 0.0) list.add(UnitPricePreset("Low", lowUnitPrice * scale))
+                if (benchmarkUnitPrice > 0.0) list.add(UnitPricePreset("Benchmark", benchmarkUnitPrice * scale))
+                if (highUnitPrice > 0.0) list.add(UnitPricePreset("High", highUnitPrice * scale))
+            } else {
+                if (benchmarkUnitPrice > 0.0) list.add(UnitPricePreset("Item Bench", benchmarkUnitPrice))
+            }
+            if (hourlyRate > 0.0) list.add(UnitPricePreset("Hourly rate", hourlyRate))
+        }
+        return list.distinctBy { "${it.label}:${it.amount}" }
+    }
+}
+
+data class UnitPricePreset(
+    val label: String,
+    val amount: Double
+)
+
+enum class PricingUnitCategory(val label: String, val units: List<String>) {
+    HOURLY("Hourly", listOf("HR")),
+    MEASUREMENT("Measurement", listOf("SF", "LF", "SQ", "CF", "CY")),
+    INDIVIDUAL("Individual unit", listOf("EA", "ROOM", "STEP", "FLIGHT", "FLAT"));
+
+    companion object {
+        fun fromUnit(unit: String): PricingUnitCategory {
+            val upper = unit.trim().uppercase()
+            return entries.firstOrNull { it.units.contains(upper) } ?: INDIVIDUAL
+        }
+    }
 }
 
 data class CategoryMeta(
@@ -109,6 +159,24 @@ object PriceBookConstants {
     val STANDARD_UNITS = listOf(
         "EA", "SF", "LF", "CF", "CY", "SQ", "HR", "ROOM", "STEP", "FLIGHT", "FLAT"
     )
+    val UNIT_DESCRIPTIONS = mapOf(
+        "HR" to "Hourly",
+        "SF" to "Square feet (SF)",
+        "LF" to "Linear feet (LF)",
+        "SQ" to "Roofing / floor squares (100 SF)",
+        "CF" to "Cubic feet (CF)",
+        "CY" to "Cubic yards (CY)",
+        "EA" to "Each (individual unit)",
+        "ROOM" to "Per room",
+        "STEP" to "Per step",
+        "FLIGHT" to "Per flight",
+        "FLAT" to "Flat rate"
+    )
+    fun describeUnit(unit: String): String {
+        val upper = unit.trim().uppercase()
+        return "$upper · ${UNIT_DESCRIPTIONS[upper] ?: upper}"
+    }
+
     const val FILTER_ALL = ""
     const val FILTER_INTERIOR = "__INTERIOR__"
     const val FILTER_EXTERIOR = "__EXTERIOR__"

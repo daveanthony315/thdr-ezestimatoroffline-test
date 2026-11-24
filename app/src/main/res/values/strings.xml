@@ -9,9 +9,13 @@
     <string name="tab_estimate">EZ Estimator</string>
     <string name="tab_pricebook">Price Book</string>
     <string name="tab_materials">Materials</string>
+    <string name="nav_home">Home</string>
     <string name="nav_estimate">Estimate</string>
+    <string name="nav_proposals">Proposals</string>
+    <string name="nav_customers">Customers</string>
     <string name="nav_pricebook">Price Book</string>
     <string name="nav_materials">Materials</string>
+    <string name="nav_settings">Settings</string>
     <string name="estimate_intro">Build a room-by-room estimate. Service pricing, units, and rates are pulled from the saved Price Book and remain editable on each estimate.</string>
     <string name="create_estimate_title">Create Estimate</string>
     <string name="create_estimate_desc">Start a new estimate with a blank workspace.</string>

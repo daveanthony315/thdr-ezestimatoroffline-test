@@ -10,8 +10,11 @@ import com.example.data.db.EstimatorDatabase
 import com.example.domain.EstimatePrintHelper
 import com.example.domain.EstimatorEngine
 import com.example.domain.PriceBookJsonCodec
+import com.example.model.AppSettings
 import com.example.model.CalcResultRow
 import com.example.model.CategoryMeta
+import com.example.model.Customer
+import com.example.model.DocumentType
 import com.example.model.EstimateDraft
 import com.example.model.EstimateRoom
 import com.example.model.EstimateSide
@@ -20,6 +23,7 @@ import com.example.model.MeasurementBasis
 import com.example.model.PriceBookConstants
 import com.example.model.PriceBookItem
 import com.example.model.PriceViewMode
+import com.example.model.ProposalStatus
 import com.example.model.RoomServiceSelection
 import com.example.model.SavedProposal
 import com.example.model.TakeoffResult
@@ -34,6 +38,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -49,6 +54,8 @@ data class EstimatorUiState(
         serviceBreakdown = emptyMap()
     ),
     val savedProposals: List<SavedProposal> = emptyList(),
+    val customers: List<Customer> = emptyList(),
+    val settings: AppSettings = AppSettings(),
     val categories: List<CategoryMeta> = emptyList(),
     val priceBookItems: List<PriceBookItem> = emptyList(),
     val timeframes: List<TimeframeBenchmark> = emptyList(),
@@ -67,6 +74,12 @@ data class EstimatorUiState(
 
 private fun todayIsoDate(): String =
     SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+private fun futureIsoDate(daysAhead: Int): String {
+    val cal = Calendar.getInstance()
+    cal.add(Calendar.DAY_OF_YEAR, daysAhead.coerceAtLeast(1))
+    return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.time)
+}
 
 private fun nowIsoTimestamp(): String =
     SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
@@ -97,7 +110,9 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         val categories: List<CategoryMeta>,
         val items: List<PriceBookItem>,
         val timeframes: List<TimeframeBenchmark>,
-        val proposals: List<SavedProposal>
+        val proposals: List<SavedProposal>,
+        val customers: List<Customer>,
+        val settings: AppSettings
     )
 
     private data class FilterState(
@@ -109,16 +124,26 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         val tfCategory: String
     )
 
-    private val catalogFlow = combine(
+    private val catalogFlow = combine<Any, CatalogState>(
         repository.categories,
         repository.priceBookItems,
         repository.timeframes,
-        repository.savedProposals
-    ) { cats, items, tfs, proposals ->
-        CatalogState(cats, items, tfs, proposals)
+        repository.savedProposals,
+        repository.customers,
+        repository.appSettings
+    ) { arr ->
+        @Suppress("UNCHECKED_CAST")
+        CatalogState(
+            categories = arr[0] as List<CategoryMeta>,
+            items = arr[1] as List<PriceBookItem>,
+            timeframes = arr[2] as List<TimeframeBenchmark>,
+            proposals = arr[3] as List<SavedProposal>,
+            customers = arr[4] as List<Customer>,
+            settings = arr[5] as AppSettings
+        )
     }
 
-    private val filterFlow = combine(
+    private val filterFlow = combine<Any?, FilterState>(
         _pbSearchQuery,
         _pbCategoryFilter,
         _pbPriceViewMode,
@@ -136,7 +161,7 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         )
     }
 
-    val uiState: StateFlow<EstimatorUiState> = combine(
+    val uiState: StateFlow<EstimatorUiState> = combine<Any?, EstimatorUiState>(
         _draft,
         catalogFlow,
         filterFlow,
@@ -163,13 +188,16 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
             priceBook = catalog.items,
             manualMaterials = draft.manualMaterials,
             discount = discount,
-            taxPercent = tax
+            taxPercent = tax,
+            settings = catalog.settings
         )
 
         EstimatorUiState(
             draft = draft,
             takeoff = takeoff,
             savedProposals = catalog.proposals,
+            customers = catalog.customers,
+            settings = catalog.settings,
             categories = catalog.categories.sortedWith(naturalCategoryComparator()),
             priceBookItems = catalog.items,
             timeframes = catalog.timeframes,
@@ -201,31 +229,73 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         _snackbarMessage.value = null
     }
 
-    // --- Estimate Metadata & Lifecycle ---
+    // --- Estimate & Proposal Metadata & Lifecycle ---
 
-    fun createNewEstimate() {
+    fun createNewEstimate(customer: Customer? = null) {
+        createNewDocument(DocumentType.ESTIMATE, customer)
+    }
+
+    fun createNewProposal(customer: Customer? = null) {
+        createNewDocument(DocumentType.PROPOSAL, customer)
+    }
+
+    fun createNewDocument(docType: DocumentType, customer: Customer? = null) {
+        val settings = uiState.value.settings
+        val taxDefault = if (settings.defaultTaxPercent == 0.0) "0" else EstimatorEngine.formatQty(settings.defaultTaxPercent)
+        val depositDefault = EstimatorEngine.formatQty(settings.defaultProposalDepositPct)
         _draft.value = EstimateDraft(
             id = null,
-            customer = "",
+            docType = docType,
+            customerId = customer?.id,
+            customer = customer?.name ?: "",
             project = "",
             date = todayIsoDate(),
-            estimateSide = EstimateSide.INTERIOR,
+            validUntil = if (docType == DocumentType.PROPOSAL) futureIsoDate(settings.defaultProposalValidDays) else "",
+            proposalStatus = ProposalStatus.DRAFT,
+            depositPercentText = depositDefault,
+            termsText = if (docType == DocumentType.PROPOSAL) settings.defaultProposalTerms else "",
+            estimateSide = settings.defaultEstimateSide,
             detailsVisible = true,
             rooms = emptyList(),
             manualMaterials = emptyMap(),
             discountText = "0",
-            taxText = "0"
+            taxText = taxDefault
         )
         _saveMessage.value = ""
-        _headerStatus.value = "Local workspace"
+        _headerStatus.value = "New ${docType.title.lowercase(Locale.US)}"
+    }
+
+    fun switchDraftDocumentType(docType: DocumentType) {
+        val settings = uiState.value.settings
+        _draft.update { cur ->
+            cur.copy(
+                docType = docType,
+                validUntil = if (docType == DocumentType.PROPOSAL && cur.validUntil.isBlank()) {
+                    futureIsoDate(settings.defaultProposalValidDays)
+                } else cur.validUntil,
+                termsText = if (docType == DocumentType.PROPOSAL && cur.termsText.isBlank()) {
+                    settings.defaultProposalTerms
+                } else cur.termsText
+            )
+        }
     }
 
     fun toggleDetailsVisible(visible: Boolean) {
         _draft.update { it.copy(detailsVisible = visible) }
     }
 
+    fun selectCustomerForDraft(customer: Customer) {
+        _draft.update {
+            it.copy(
+                customerId = customer.id,
+                customer = customer.name,
+                detailsVisible = true
+            )
+        }
+    }
+
     fun updateCustomer(value: String) {
-        _draft.update { it.copy(customer = value) }
+        _draft.update { it.copy(customer = value, customerId = null) }
     }
 
     fun updateProject(value: String) {
@@ -234,6 +304,22 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun updateDate(value: String) {
         _draft.update { it.copy(date = value) }
+    }
+
+    fun updateValidUntil(value: String) {
+        _draft.update { it.copy(validUntil = value) }
+    }
+
+    fun updateProposalStatus(status: ProposalStatus) {
+        _draft.update { it.copy(proposalStatus = status) }
+    }
+
+    fun updateDepositPercent(value: String) {
+        _draft.update { it.copy(depositPercentText = value) }
+    }
+
+    fun updateTermsText(value: String) {
+        _draft.update { it.copy(termsText = value) }
     }
 
     fun updateDiscount(value: String) {
@@ -256,6 +342,8 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val savedId = repository.saveEstimate(
                 existingId = draft.id,
+                docType = draft.docType,
+                status = draft.proposalStatus,
                 customer = draft.customer,
                 project = draft.project,
                 date = draft.date,
@@ -264,18 +352,66 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
                 payloadJson = json
             )
             _draft.update { it.copy(id = savedId) }
-            _saveMessage.value = "Estimate saved locally on this device."
-            _headerStatus.value = "Estimate saved locally"
-            _snackbarMessage.value = "Estimate saved locally"
+            val label = draft.docType.title
+            _saveMessage.value = "$label saved locally on this device."
+            _headerStatus.value = "$label saved locally"
+            _snackbarMessage.value = "$label saved locally"
         }
     }
 
     fun loadSavedProposal(proposal: SavedProposal) {
         val decoded = PriceBookJsonCodec.decodeEstimateDraft(proposal.id, proposal.payloadJson)
+        val effectiveType = if (proposal.docType == DocumentType.PROPOSAL) DocumentType.PROPOSAL else decoded.docType
         val syncedRooms = decoded.rooms.map { EstimatorEngine.syncRoomServiceSelections(it, uiState.value.priceBookItems) }
-        _draft.value = decoded.copy(rooms = syncedRooms)
-        _saveMessage.value = "Local proposal loaded for editing."
-        _headerStatus.value = "Proposal loaded"
+        _draft.value = decoded.copy(
+            docType = effectiveType,
+            proposalStatus = proposal.status,
+            rooms = syncedRooms
+        )
+        _saveMessage.value = "Loaded ${effectiveType.title.lowercase(Locale.US)} for editing."
+        _headerStatus.value = "${effectiveType.title} loaded"
+    }
+
+    fun convertSavedEstimateToProposal(saved: SavedProposal) {
+        val decoded = PriceBookJsonCodec.decodeEstimateDraft(null, saved.payloadJson)
+        val settings = uiState.value.settings
+        val syncedRooms = decoded.rooms.map { EstimatorEngine.syncRoomServiceSelections(it, uiState.value.priceBookItems) }
+        _draft.value = decoded.copy(
+            id = null,
+            docType = DocumentType.PROPOSAL,
+            proposalStatus = ProposalStatus.DRAFT,
+            date = todayIsoDate(),
+            validUntil = futureIsoDate(settings.defaultProposalValidDays),
+            depositPercentText = EstimatorEngine.formatQty(settings.defaultProposalDepositPct),
+            termsText = decoded.termsText.ifBlank { settings.defaultProposalTerms },
+            rooms = syncedRooms
+        )
+        _saveMessage.value = "Converted estimate into a new Proposal draft."
+        _headerStatus.value = "New proposal"
+        _snackbarMessage.value = "Estimate copied into Proposal builder"
+    }
+
+    fun updateSavedProposalStatus(proposal: SavedProposal, status: ProposalStatus) {
+        val decoded = PriceBookJsonCodec.decodeEstimateDraft(proposal.id, proposal.payloadJson)
+        val updatedDraft = decoded.copy(docType = proposal.docType, proposalStatus = status)
+        val json = PriceBookJsonCodec.encodeEstimateDraft(updatedDraft, proposal.total)
+        viewModelScope.launch {
+            repository.saveEstimate(
+                existingId = proposal.id,
+                docType = proposal.docType,
+                status = status,
+                customer = proposal.customer,
+                project = proposal.project,
+                date = proposal.date,
+                total = proposal.total,
+                savedAt = nowIsoTimestamp(),
+                payloadJson = json
+            )
+            if (_draft.value.id == proposal.id) {
+                _draft.update { it.copy(proposalStatus = status) }
+            }
+            _snackbarMessage.value = "Updated status to ${status.label}"
+        }
     }
 
     fun deleteSavedProposal(id: Long) {
@@ -284,7 +420,7 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
             if (_draft.value.id == id) {
                 _draft.update { it.copy(id = null) }
             }
-            _snackbarMessage.value = "Saved proposal deleted"
+            _snackbarMessage.value = "Deleted from saved items"
         }
     }
 
@@ -294,8 +430,93 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
             context = context,
             draft = state.draft,
             takeoff = state.takeoff,
-            priceBook = state.priceBookItems
+            priceBook = state.priceBookItems,
+            settings = state.settings
         )
+    }
+
+    fun printSavedDocument(context: Context, saved: SavedProposal) {
+        val state = uiState.value
+        val decoded = PriceBookJsonCodec.decodeEstimateDraft(saved.id, saved.payloadJson)
+        val discount = decoded.discountText.toDoubleOrNull() ?: 0.0
+        val tax = decoded.taxText.toDoubleOrNull() ?: 0.0
+        val takeoff = EstimatorEngine.computeTakeoff(
+            rooms = decoded.rooms,
+            priceBook = state.priceBookItems,
+            manualMaterials = decoded.manualMaterials,
+            discount = discount,
+            taxPercent = tax,
+            settings = state.settings
+        )
+        EstimatePrintHelper.printEstimate(
+            context = context,
+            draft = decoded.copy(docType = saved.docType, proposalStatus = saved.status),
+            takeoff = takeoff,
+            priceBook = state.priceBookItems,
+            settings = state.settings
+        )
+    }
+
+    // --- Customers Directory ---
+
+    fun saveCustomer(customer: Customer) {
+        val cleanName = customer.name.trim()
+        if (cleanName.isEmpty()) {
+            _snackbarMessage.value = "Customer name is required."
+            return
+        }
+        val toSave = customer.copy(
+            name = cleanName,
+            createdAt = customer.createdAt.ifBlank { todayIsoDate() }
+        )
+        viewModelScope.launch {
+            val savedId = repository.saveCustomer(toSave)
+            if (_draft.value.customerId == savedId || _draft.value.customer.equals(cleanName, ignoreCase = true)) {
+                _draft.update { it.copy(customerId = savedId, customer = cleanName) }
+            }
+            _snackbarMessage.value = if (customer.id == 0L) "Customer \"$cleanName\" added" else "Customer updated"
+        }
+    }
+
+    fun saveCurrentDraftCustomerToDirectory() {
+        val name = _draft.value.customer.trim()
+        if (name.isEmpty()) {
+            _snackbarMessage.value = "Enter a customer name first."
+            return
+        }
+        val existing = uiState.value.customers.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (existing != null) {
+            _draft.update { it.copy(customerId = existing.id) }
+            _snackbarMessage.value = "\"$name\" is already in Customers"
+            return
+        }
+        saveCustomer(Customer(name = name, createdAt = todayIsoDate()))
+    }
+
+    fun deleteCustomer(id: Long) {
+        viewModelScope.launch {
+            repository.deleteCustomer(id)
+            if (_draft.value.customerId == id) {
+                _draft.update { it.copy(customerId = null) }
+            }
+            _snackbarMessage.value = "Customer removed"
+        }
+    }
+
+    // --- App Settings ---
+
+    fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        val next = transform(uiState.value.settings)
+        viewModelScope.launch {
+            repository.saveAppSettings(next)
+        }
+    }
+
+    fun resetSettingsToDefaults() {
+        viewModelScope.launch {
+            repository.saveAppSettings(AppSettings())
+            _snackbarMessage.value = "Settings restored to defaults"
+        }
     }
 
     // --- Rooms & Services ---
@@ -401,16 +622,61 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
             val d = EstimatorEngine.computeDimensions(room)
             val basis = chosen.effectiveBasis()
             val qty = EstimatorEngine.defaultQty(chosen.unit, d, room, service, basis)
-            val rate = chosen.defaultEstimateRate()
+            val rate = EstimatorEngine.defaultRateForUnit(chosen, chosen.unit)
             val cur = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
             val updated = cur.copy(
                 selectedPbItemName = chosen.item,
+                overrideUnit = "",
+                overrideMeasurementBasis = "",
                 rate = rate,
                 rateInitialized = true,
                 quantity = qty,
                 quantityManual = false
             )
             room.copy(serviceSelections = room.serviceSelections + (service to updated))
+        }
+    }
+
+    fun updateServicePricingUnit(roomId: String, service: String, rawUnit: String) {
+        val pb = uiState.value.priceBookItems
+        val items = EstimatorEngine.pbItemsForService(service, pb)
+        val cleanUnit = rawUnit.trim().uppercase(Locale.US)
+        updateRoom(roomId) { room ->
+            val cur = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
+            val chosen = items.firstOrNull { it.item == cur.selectedPbItemName } ?: items.firstOrNull()
+            val nextOverrideUnit = if (chosen != null && cleanUnit.equals(chosen.unit, ignoreCase = true)) {
+                ""
+            } else {
+                cleanUnit
+            }
+            val effectiveUnit = nextOverrideUnit.ifEmpty { chosen?.unit ?: cleanUnit }
+            val validBases = MeasurementBasis.optionsForUnit(effectiveUnit)
+            val nextBasisOverride = if (cur.overrideMeasurementBasis.isNotBlank() &&
+                validBases.any { it.key == cur.overrideMeasurementBasis }
+            ) cur.overrideMeasurementBasis else ""
+            val updatedSel = cur.copy(
+                overrideUnit = nextOverrideUnit,
+                overrideMeasurementBasis = nextBasisOverride,
+                rate = if (chosen != null) EstimatorEngine.defaultRateForUnit(chosen, effectiveUnit) else cur.rate,
+                rateInitialized = true,
+                quantityManual = false
+            )
+            val nextRoom = room.copy(serviceSelections = room.serviceSelections + (service to updatedSel))
+            EstimatorEngine.syncRoomServiceSelections(nextRoom, pb)
+        }
+    }
+
+    fun updateServiceMeasurementBasis(roomId: String, service: String, basisKey: String) {
+        val pb = uiState.value.priceBookItems
+        updateRoom(roomId) { room ->
+            val cur = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
+            val isManual = basisKey == MeasurementBasis.MANUAL.key
+            val updatedSel = cur.copy(
+                overrideMeasurementBasis = basisKey,
+                quantityManual = if (isManual) true else false
+            )
+            val nextRoom = room.copy(serviceSelections = room.serviceSelections + (service to updatedSel))
+            EstimatorEngine.syncRoomServiceSelections(nextRoom, pb)
         }
     }
 
@@ -426,8 +692,12 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         val pb = uiState.value.priceBookItems
         updateRoom(roomId) { room ->
             val cur = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
+            val nextBasis = if (cur.overrideMeasurementBasis == MeasurementBasis.MANUAL.key) "" else cur.overrideMeasurementBasis
             val updated = room.copy(
-                serviceSelections = room.serviceSelections + (service to cur.copy(quantityManual = false))
+                serviceSelections = room.serviceSelections + (service to cur.copy(
+                    quantityManual = false,
+                    overrideMeasurementBasis = nextBasis
+                ))
             )
             EstimatorEngine.syncRoomServiceSelections(updated, pb)
         }

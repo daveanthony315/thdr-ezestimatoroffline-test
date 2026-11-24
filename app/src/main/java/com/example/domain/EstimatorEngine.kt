@@ -1,5 +1,6 @@
 package com.example.domain
 
+import com.example.model.AppSettings
 import com.example.model.CalcResultRow
 import com.example.model.EstimateRoom
 import com.example.model.EstimateSide
@@ -96,12 +97,9 @@ object EstimatorEngine {
         return "Interior"
     }
 
-    fun computeDimensions(room: EstimateRoom): RoomDimensions {
-        val floor = max(0.0, room.lengthFt) * max(0.0, room.widthFt)
-        val perim = 2.0 * (max(0.0, room.lengthFt) + max(0.0, room.widthFt))
-        val wall = perim * max(0.0, room.heightFt)
-        return RoomDimensions(floor = floor, wall = wall, ceiling = floor, perim = perim)
-    }
+    fun computeDimensions(room: EstimateRoom): RoomDimensions =
+        ConstructionMaterialCalculator.measureRoom(room.lengthFt, room.widthFt, room.heightFt)
+            .toRoomDimensions()
 
     fun pbItemsForService(service: String, priceBook: List<PriceBookItem>): List<PriceBookItem> {
         val terms = (serviceAliases[service] ?: listOf(service)).map { it.lowercase(Locale.US) }
@@ -116,6 +114,37 @@ object EstimatorEngine {
             found = found.filter { exteriorPaintingFilter.containsMatchIn(it.item) }
         }
         return found
+    }
+
+    fun effectiveBasisForSelection(
+        sel: RoomServiceSelection,
+        chosen: PriceBookItem,
+        effectiveUnit: String
+    ): MeasurementBasis {
+        val valid = MeasurementBasis.optionsForUnit(effectiveUnit)
+        val override = sel.overrideMeasurementBasis.trim()
+        if (override.isNotEmpty()) {
+            val parsed = MeasurementBasis.fromKey(override)
+            if (valid.contains(parsed)) return parsed
+        }
+        return if (effectiveUnit.equals(chosen.unit, ignoreCase = true)) {
+            chosen.effectiveBasis()
+        } else {
+            MeasurementBasis.AUTO
+        }
+    }
+
+    fun defaultRateForUnit(chosen: PriceBookItem, unit: String): Double {
+        val upper = unit.trim().uppercase(Locale.US)
+        return when {
+            upper == "HR" -> if (chosen.hourlyRate > 0.0) chosen.hourlyRate else 85.0
+            upper.equals(chosen.unit, ignoreCase = true) -> chosen.benchmarkUnitPrice
+            chosen.unit.equals("SF", ignoreCase = true) && upper == "SQ" ->
+                round2(chosen.benchmarkUnitPrice * ConstructionMaterialCalculator.ROOFING_SQUARE_SQFT)
+            chosen.unit.equals("SQ", ignoreCase = true) && upper == "SF" ->
+                round2(chosen.benchmarkUnitPrice / ConstructionMaterialCalculator.ROOFING_SQUARE_SQFT)
+            else -> chosen.benchmarkUnitPrice
+        }
     }
 
     fun defaultQty(
@@ -133,7 +162,7 @@ object EstimatorEngine {
             MeasurementBasis.WALLS_CEILING_AREA -> dims.wall + dims.ceiling
             MeasurementBasis.PERIMETER -> dims.perim
             MeasurementBasis.FENCE_LENGTH -> room.fenceLF
-            MeasurementBasis.FLOOR_SQUARES -> dims.floor / 100.0
+            MeasurementBasis.FLOOR_SQUARES -> ConstructionMaterialCalculator.roofingSquares(dims.floor)
             MeasurementBasis.VOLUME_CF -> dims.floor * room.heightFt
             MeasurementBasis.VOLUME_CY -> (dims.floor * room.heightFt) / 27.0
             MeasurementBasis.DOOR_COUNT -> max(0, room.doors).toDouble()
@@ -143,10 +172,11 @@ object EstimatorEngine {
                 "SF" -> when {
                     room.side == EstimateSide.EXTERIOR && (service == "Decks" || service == "Decks & Porches") -> dims.floor
                     room.side == EstimateSide.EXTERIOR -> dims.wall
+                    service == "Flooring" || service == "Roofing" -> dims.floor
                     else -> dims.wall + dims.ceiling
                 }
                 "LF" -> if (service == "Fencing" && room.side == EstimateSide.EXTERIOR) room.fenceLF else dims.perim
-                "SQ" -> dims.floor / 100.0
+                "SQ" -> ConstructionMaterialCalculator.roofingSquares(dims.floor)
                 "CF" -> dims.floor * room.heightFt
                 "CY" -> (dims.floor * room.heightFt) / 27.0
                 "HR", "ROOM" -> 1.0
@@ -172,12 +202,13 @@ object EstimatorEngine {
             }
             val current = updated[service] ?: RoomServiceSelection(serviceName = service)
             val chosen = items.firstOrNull { it.item == current.selectedPbItemName } ?: items.first()
-            val basis = chosen.effectiveBasis()
-            val rate = if (current.rateInitialized) current.rate else chosen.defaultEstimateRate()
+            val effectiveUnit = current.effectiveUnit(chosen.unit)
+            val basis = effectiveBasisForSelection(current, chosen, effectiveUnit)
+            val rate = if (current.rateInitialized) current.rate else defaultRateForUnit(chosen, effectiveUnit)
             val qty = if (current.quantityManual) {
                 max(0.0, current.quantity)
             } else {
-                defaultQty(chosen.unit, d, room, service, basis)
+                defaultQty(effectiveUnit, d, room, service, basis)
             }
             updated[service] = current.copy(
                 selectedPbItemName = chosen.item,
@@ -194,7 +225,8 @@ object EstimatorEngine {
         priceBook: List<PriceBookItem>,
         manualMaterials: Map<String, Double>,
         discount: Double,
-        taxPercent: Double
+        taxPercent: Double,
+        settings: AppSettings = AppSettings()
     ): TakeoffResult {
         val raw = linkedMapOf<String, Double>()
         var serviceTotal = 0.0
@@ -214,15 +246,16 @@ object EstimatorEngine {
                 if (items.isEmpty()) continue
                 val sel = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
                 val chosen = items.firstOrNull { it.item == sel.selectedPbItemName } ?: items.first()
-                val basis = chosen.effectiveBasis()
-                val autoQty = defaultQty(chosen.unit, d, room, service, basis)
+                val effectiveUnit = sel.effectiveUnit(chosen.unit)
+                val basis = effectiveBasisForSelection(sel, chosen, effectiveUnit)
+                val autoQty = defaultQty(effectiveUnit, d, room, service, basis)
                 val qty = max(0.0, if (sel.quantityManual) sel.quantity else autoQty)
-                val rate = max(0.0, if (sel.rateInitialized) sel.rate else chosen.defaultEstimateRate())
+                val rate = max(0.0, if (sel.rateInitialized) sel.rate else defaultRateForUnit(chosen, effectiveUnit))
                 val lineTotal = qty * rate
                 serviceTotal += lineTotal
 
-                val effectiveLaborRate = if (chosen.laborRate > 0.0) chosen.laborRate else 85.0
-                val internalPerUnit = if (chosen.unit.equals("HR", ignoreCase = true)) {
+                val effectiveLaborRate = if (chosen.laborRate > 0.0) chosen.laborRate else settings.defaultHourlyRate
+                val internalPerUnit = if (effectiveUnit.equals("HR", ignoreCase = true)) {
                     effectiveLaborRate
                 } else {
                     effectiveLaborRate * chosen.benchmarkLaborHoursPerUnit
@@ -268,24 +301,43 @@ object EstimatorEngine {
                 if (service == "Framing") {
                     addRaw("Framing perimeter LF", d.perim)
                 }
+
+                if (service == "Roofing") {
+                    addRaw("Roofing area SF", d.floor)
+                }
             }
         }
+
+        val drywallWaste = settings.defaultDrywallWastePct.coerceIn(0, 50) / 100.0
+        val flooringWaste = settings.defaultFlooringWastePct.coerceIn(0, 50) / 100.0
+        val tileWaste = settings.defaultTileWastePct.coerceIn(0, 50) / 100.0
+        val roofingWaste = settings.defaultRoofingWastePct.coerceIn(0, 50) / 100.0
+        val paintWaste = settings.defaultPaintWastePct.coerceIn(0, 50) / 100.0
+        val paintCov = settings.paintCoverageSqFtPerGal.takeIf { it > 0.0 } ?: 350.0
 
         val mats = linkedMapOf<String, Double>()
         val boardArea = raw["Drywall board area SF"] ?: 0.0
         val finishArea = raw["Drywall finishing area SF"] ?: 0.0
         if (boardArea > 0.0) {
-            mats["1/2-inch drywall sheets (4x8, incl. 10% waste)"] = ceilSnap(boardArea * 1.10 / 32.0)
+            val drywall = ConstructionMaterialCalculator.calculateDrywall(boardArea, wasteFactor = drywallWaste)
+            mats["1/2-inch drywall sheets (4x8, incl. ${settings.defaultDrywallWastePct}% waste)"] = drywall.sheetsNeeded
         }
         if (finishArea > 0.0) {
-            mats["Joint compound (4.5 gal)"] = ceilSnap(finishArea / 500.0)
+            val finishCalc = ConstructionMaterialCalculator.calculateDrywall(finishArea, wasteFactor = drywallWaste)
             val sheetSource = if (boardArea > 0.0) boardArea else finishArea
-            val drywallSheets = ceilSnap(sheetSource * 1.10 / 32.0)
+            val drywallSheets = ConstructionMaterialCalculator.calculateDrywall(sheetSource, wasteFactor = drywallWaste).sheetsNeeded
+            mats["Joint compound (4.5 gal)"] = finishCalc.jointCompoundBuckets
             mats["Drywall tape (LF)"] = drywallSheets * 24.0
         }
         val paintCoverage = raw["Paint coverage area SF"] ?: 0.0
         if (paintCoverage > 0.0) {
-            mats["Paint / primer gallons (350 SF per gallon)"] = ceilSnap(paintCoverage / 350.0)
+            val paintReq = ConstructionMaterialCalculator.calculatePaint(
+                surfaceAreaSqFt = paintCoverage,
+                coats = 1,
+                wasteFactor = paintWaste,
+                coverageSqFtPerGallon = paintCov
+            )
+            mats["Paint / primer gallons (${paintCov.toInt()} SF per gallon)"] = paintReq.gallonsWithoutWaste
         }
         val tapeLf = raw["Painter tape LF"] ?: 0.0
         if (tapeLf > 0.0) {
@@ -293,19 +345,28 @@ object EstimatorEngine {
         }
         val flooringArea = raw["Flooring area SF"] ?: 0.0
         if (flooringArea > 0.0) {
-            mats["Flooring (SF incl. 10% waste)"] = ceilSnap(flooringArea * 1.10)
-            mats["Underlayment (SF)"] = ceilSnap(flooringArea)
+            val floorReq = ConstructionMaterialCalculator.calculateFlooring(flooringArea, wasteFactor = flooringWaste)
+            mats["Flooring (SF incl. ${settings.defaultFlooringWastePct}% waste)"] = floorReq.recommendedOrderSqFt
+            mats["Underlayment (SF)"] = floorReq.underlaymentSqFt
         }
         val tileFloor = raw["Tile floor area SF"] ?: 0.0
         if (tileFloor > 0.0) {
-            mats["Tile (SF incl. 15% waste)"] = ceilSnap(tileFloor * 1.15)
-            mats["Thinset (bags, approx. 50 SF each)"] = ceilSnap(tileFloor / 50.0)
-            mats["Grout (bags, approx. 100 SF each)"] = ceilSnap(tileFloor / 100.0)
+            val tileReq = ConstructionMaterialCalculator.calculateTile(tileFloor, wasteFactor = tileWaste)
+            mats["Tile (SF incl. ${settings.defaultTileWastePct}% waste)"] = tileReq.recommendedOrderSqFt
+            mats["Thinset (bags, approx. 50 SF each)"] = tileReq.thinsetBags
+            mats["Grout (bags, approx. 100 SF each)"] = tileReq.groutBags
         }
         val framingLf = raw["Framing perimeter LF"] ?: 0.0
         if (framingLf > 0.0) {
+            val framingReq = ConstructionMaterialCalculator.calculateFraming(framingLf, 8.0)
             mats["2x4 studs (planning allowance)"] = ceilSnap(framingLf / 1.33)
-            mats["Framing plates (LF)"] = ceilSnap(framingLf * 3.0)
+            mats["Framing plates (LF)"] = framingReq.platesLf
+        }
+        val roofArea = raw["Roofing area SF"] ?: 0.0
+        if (roofArea > 0.0) {
+            val roofReq = ConstructionMaterialCalculator.calculateRoofing(roofArea, wasteFactor = roofingWaste)
+            mats["Roofing squares (incl. ${settings.defaultRoofingWastePct}% waste)"] = round2(roofReq.squaresWithWaste)
+            mats["Shingle bundles (3 per square)"] = roofReq.shingleBundles
         }
 
         manualMaterials.forEach { (name, qty) ->
@@ -340,29 +401,30 @@ object EstimatorEngine {
             MaterialCalcKind.CONCRETE -> {
                 val l = max(0.0, p1)
                 val w = max(0.0, p2)
-                val tFt = max(0.0, p3) / 12.0
-                if (l <= 0.0 || w <= 0.0 || tFt <= 0.0) {
+                val t = max(0.0, p3)
+                if (l <= 0.0 || w <= 0.0 || t <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter length, width, and thickness greater than zero."))
                 } else {
-                    val cy = (l * w * tFt / 27.0) * 1.10
+                    val req = ConstructionMaterialCalculator.calculateConcrete(l, w, t)
                     Result.success(
                         listOf(
-                            CalcResultRow("concrete::vol", "Concrete volume incl. 10% waste", cy, "CY", formatQty(cy)),
-                            CalcResultRow("concrete::60", "Concrete bags — 60 lb", ceilSnap(cy * 45.0), "bags", formatQty(ceilSnap(cy * 45.0))),
-                            CalcResultRow("concrete::80", "Concrete bags — 80 lb", ceilSnap(cy * 34.0), "bags", formatQty(ceilSnap(cy * 34.0)))
+                            CalcResultRow("concrete::vol", "Concrete volume incl. 10% waste", req.cubicYardsWithWaste, "CY", formatQty(req.cubicYardsWithWaste)),
+                            CalcResultRow("concrete::60", "Concrete bags — 60 lb", req.bags60Lb, "bags", formatQty(req.bags60Lb)),
+                            CalcResultRow("concrete::80", "Concrete bags — 80 lb", req.bags80Lb, "bags", formatQty(req.bags80Lb))
                         )
                     )
                 }
             }
             MaterialCalcKind.CMU -> {
-                val area = max(0.0, p1) * max(0.0, p2)
-                if (area <= 0.0) {
+                val l = max(0.0, p1)
+                val h = max(0.0, p2)
+                if (l <= 0.0 || h <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter wall length and height greater than zero."))
                 } else {
-                    val blocks = ceilSnap(area / 0.89 * 1.05)
+                    val req = ConstructionMaterialCalculator.calculateCmu(l, h)
                     Result.success(
                         listOf(
-                            CalcResultRow("cmu::blocks", "8 × 8 × 16 CMU blocks incl. 5% allowance", blocks, "blocks", formatQty(blocks))
+                            CalcResultRow("cmu::blocks", "8 × 8 × 16 CMU blocks incl. 5% allowance", req.blocksNeeded, "blocks", formatQty(req.blocksNeeded))
                         )
                     )
                 }
@@ -373,48 +435,52 @@ object EstimatorEngine {
                 if (l <= 0.0 || h <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter wall length and height greater than zero."))
                 } else {
-                    val studs = ceilSnap((l / 1.33 + 1.0) * 1.15)
-                    val plates = ceilSnap(l * 3.0)
-                    val sf = l * h
+                    val req = ConstructionMaterialCalculator.calculateFraming(l, h)
                     Result.success(
                         listOf(
-                            CalcResultRow("framing::studs", "2×4 studs — 16 in. O.C. incl. 15% allowance", studs, "studs", formatQty(studs)),
-                            CalcResultRow("framing::plates", "2×4 plates — three runs", plates, "LF", formatQty(plates)),
-                            CalcResultRow("framing::sf", "Wall framing surface", sf, "SF", formatQty(sf))
+                            CalcResultRow("framing::studs", "2×4 studs — 16 in. O.C. incl. 15% allowance", req.studsNeeded, "studs", formatQty(req.studsNeeded)),
+                            CalcResultRow("framing::plates", "2×4 plates — three runs", req.platesLf, "LF", formatQty(req.platesLf)),
+                            CalcResultRow("framing::sf", "Wall framing surface", req.wallSurfaceSqFt, "SF", formatQty(req.wallSurfaceSqFt))
                         )
                     )
                 }
             }
             MaterialCalcKind.DRYWALL -> {
-                val area = max(0.0, p1) + max(0.0, p2)
+                val w = max(0.0, p1)
+                val c = max(0.0, p2)
                 val sheetArea = if (p3 == 48.0) 48.0 else 32.0
-                if (area <= 0.0) {
+                if (w + c <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter wall and/or ceiling area greater than zero."))
                 } else {
-                    val sheets = ceilSnap(area * 1.10 / sheetArea)
+                    val req = ConstructionMaterialCalculator.calculateDrywall(w, c, sheetArea)
                     val label = if (sheetArea == 48.0) "4×12" else "4×8"
                     Result.success(
                         listOf(
-                            CalcResultRow("drywall::sheets", "Drywall sheets ($label) incl. 10% allowance", sheets, "sheets", formatQty(sheets)),
-                            CalcResultRow("drywall::area", "Drywall surface area", area, "SF", formatQty(area))
+                            CalcResultRow("drywall::sheets", "Drywall sheets ($label) incl. 10% allowance", req.sheetsNeeded, "sheets", formatQty(req.sheetsNeeded)),
+                            CalcResultRow("drywall::area", "Drywall surface area", req.totalSurfaceSqFt, "SF", formatQty(req.totalSurfaceSqFt))
                         )
                     )
                 }
             }
             MaterialCalcKind.PAINT -> {
                 val gross = max(0.0, p1)
-                val windows = max(0.0, p2)
-                val doors = max(0.0, p3)
+                val windows = max(0, p2.toInt())
+                val doors = max(0, p3.toInt())
                 val coats = max(1, p4.toInt())
                 if (gross <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter paint surface area greater than zero."))
                 } else {
-                    val net = max(0.0, gross - windows * 15.0 - doors * 20.0)
-                    val gallons = ceilSnap((net * coats) / 350.0)
+                    val req = ConstructionMaterialCalculator.calculatePaint(
+                        surfaceAreaSqFt = gross,
+                        windows = windows,
+                        doors = doors,
+                        coats = coats
+                    )
                     Result.success(
                         listOf(
-                            CalcResultRow("paint::net", "Net paintable area after opening deductions", net, "SF", formatQty(net)),
-                            CalcResultRow("paint::gal", "Paint / primer for $coats coat(s) at 350 SF per gallon", gallons, "gallons", formatQty(gallons))
+                            CalcResultRow("paint::net", "Net paintable area after opening deductions", req.netPaintableSqFt, "SF", formatQty(req.netPaintableSqFt)),
+                            CalcResultRow("paint::gal", "Paint / primer for $coats coat(s) at 350 SF per gallon", req.gallonsWithoutWaste, "gallons", formatQty(req.gallonsWithoutWaste)),
+                            CalcResultRow("paint::gal_waste", "Paint w/ standard 10% touch-up/cut-in waste", req.gallonsWithWaste, "gallons", formatQty(req.gallonsWithWaste))
                         )
                     )
                 }
@@ -425,13 +491,35 @@ object EstimatorEngine {
                 if (area <= 0.0) {
                     Result.failure(IllegalArgumentException("Enter floor area greater than zero."))
                 } else {
-                    val qty = ceilSnap(area * factor)
-                    val wastePct = (factor - 1.0) * 100.0
+                    val wasteFactor = max(0.0, factor - 1.0)
+                    val req = ConstructionMaterialCalculator.calculateFlooring(area, wasteFactor)
+                    val wastePct = wasteFactor * 100.0
                     Result.success(
                         listOf(
-                            CalcResultRow("flooring::qty", "Flooring quantity incl. selected pattern allowance", qty, "SF", formatQty(qty)),
-                            CalcResultRow("flooring::net", "Net measured floor area", area, "SF", formatQty(area)),
+                            CalcResultRow("flooring::qty", "Flooring quantity incl. selected pattern allowance", req.recommendedOrderSqFt, "SF", formatQty(req.recommendedOrderSqFt)),
+                            CalcResultRow("flooring::net", "Net measured floor area", req.netAreaSqFt, "SF", formatQty(req.netAreaSqFt)),
                             CalcResultRow("flooring::waste", "Waste allowance", wastePct, "%", formatQty(wastePct))
+                        )
+                    )
+                }
+            }
+            MaterialCalcKind.ROOFING -> {
+                val l = max(0.0, p1)
+                val w = max(0.0, p2)
+                val pitch = if (p3 > 0.0) p3 else 1.0
+                if (l <= 0.0 || w <= 0.0) {
+                    Result.failure(IllegalArgumentException("Enter length and width greater than zero."))
+                } else {
+                    val area = ConstructionMaterialCalculator.floorArea(l, w) * pitch
+                    val req = ConstructionMaterialCalculator.calculateRoofing(area)
+                    val perim = ConstructionMaterialCalculator.linearFootage(l, w)
+                    Result.success(
+                        listOf(
+                            CalcResultRow("roofing::area", "Roof / footprint area (L × W × pitch)", req.roofAreaSqFt, "SF", formatQty(req.roofAreaSqFt)),
+                            CalcResultRow("roofing::net_sq", "Roofing squares (100 sq ft / square)", req.netSquares, "SQ", formatQty(req.netSquares)),
+                            CalcResultRow("roofing::waste_sq", "Roofing squares incl. 10% waste", req.squaresWithWaste, "SQ", formatQty(req.squaresWithWaste)),
+                            CalcResultRow("roofing::bundles", "Shingle bundles (3 per square)", req.shingleBundles, "bundles", formatQty(req.shingleBundles)),
+                            CalcResultRow("roofing::perim", "Linear perimeter ((L + W) × 2)", perim, "LF", formatQty(perim))
                         )
                     )
                 }
@@ -439,15 +527,21 @@ object EstimatorEngine {
         }
     }
 
-    fun ceilSnap(value: Double): Double = ceil(value - 1e-10)
+    fun ceilSnap(value: Double): Double = ConstructionMaterialCalculator.ceilSnap(value)
 
-    fun round2(value: Double): Double = round(value * 100.0) / 100.0
+    fun round2(value: Double): Double = ConstructionMaterialCalculator.round2(value)
 
-    fun formatMoney(amount: Double): String {
+    fun formatMoney(amount: Double, currencySymbol: String = "$"): String {
+        val clean = if (amount.isNaN() || amount.isInfinite()) 0.0 else amount
         val nf = NumberFormat.getCurrencyInstance(Locale.US)
         nf.minimumFractionDigits = 2
         nf.maximumFractionDigits = 2
-        return nf.format(if (amount.isNaN() || amount.isInfinite()) 0.0 else amount)
+        val formatted = nf.format(clean)
+        return if (currencySymbol == "$" || currencySymbol.isBlank()) {
+            formatted
+        } else {
+            formatted.replace("$", currencySymbol)
+        }
     }
 
     fun formatQty(qty: Double): String {

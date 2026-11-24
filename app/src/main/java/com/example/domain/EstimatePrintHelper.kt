@@ -3,9 +3,13 @@ package com.example.domain
 import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.util.Base64
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.example.R
+import com.example.model.AppSettings
+import com.example.model.DocumentType
 import com.example.model.EstimateDraft
 import com.example.model.PriceBookItem
 import com.example.model.TakeoffResult
@@ -16,17 +20,20 @@ object EstimatePrintHelper {
         context: Context,
         draft: EstimateDraft,
         takeoff: TakeoffResult,
-        priceBook: List<PriceBookItem>
+        priceBook: List<PriceBookItem>,
+        settings: AppSettings = AppSettings()
     ) {
-        val html = buildEstimateHtml(draft, takeoff, priceBook)
+        val logoBase64 = loadLogoBase64(context)
+        val html = buildEstimateHtml(draft, takeoff, priceBook, settings, logoBase64)
         val webView = WebView(context)
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
-                val titleSlug = (draft.project.ifBlank { draft.customer }.ifBlank { "THDR_Estimate" })
-                val jobName = "House DR - $titleSlug"
+                val docLabel = draft.docType.title
+                val titleSlug = (draft.project.ifBlank { draft.customer }.ifBlank { "THDR_$docLabel" })
+                val jobName = "${settings.companyName.ifBlank { "House DR" }} - $docLabel - $titleSlug"
                 val adapter = webView.createPrintDocumentAdapter(jobName)
                 printManager.print(jobName, adapter, PrintAttributes.Builder().build())
             }
@@ -40,11 +47,22 @@ object EstimatePrintHelper {
         .replace(">", "&gt;")
         .replace("\"", "&quot;")
 
+    private fun loadLogoBase64(context: Context): String? = try {
+        context.resources.openRawResource(R.drawable.thdr_logo).use { stream ->
+            Base64.encodeToString(stream.readBytes(), Base64.NO_WRAP)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
     private fun buildEstimateHtml(
         draft: EstimateDraft,
         takeoff: TakeoffResult,
-        priceBook: List<PriceBookItem>
+        priceBook: List<PriceBookItem>,
+        settings: AppSettings,
+        logoBase64: String?
     ): String {
+        val currency = settings.currencySymbol
         val roomsHtml = if (draft.rooms.isEmpty()) {
             "<p>No rooms or work areas added.</p>"
         } else {
@@ -57,7 +75,7 @@ object EstimatePrintHelper {
                         val sel = room.serviceSelections[svc]
                         val items = EstimatorEngine.pbItemsForService(svc, priceBook)
                         val chosen = items.firstOrNull { it.item == sel?.selectedPbItemName } ?: items.firstOrNull()
-                        val unit = chosen?.unit ?: "EA"
+                        val unit = sel?.effectiveUnit(chosen?.unit ?: "EA") ?: chosen?.unit ?: "EA"
                         val qty = sel?.quantity ?: 0.0
                         val rate = sel?.rate ?: 0.0
                         val total = qty * rate
@@ -68,8 +86,8 @@ object EstimatePrintHelper {
                             <strong>${esc(svc)}</strong>${if (chosen != null) " — ${esc(chosen.item)}" else ""}
                             ${if (notes.isNotBlank()) "<div class='note'>${esc(notes)}</div>" else ""}
                           </div>
-                          <div>${EstimatorEngine.formatQty(qty)} $unit @ ${EstimatorEngine.formatMoney(rate)}</div>
-                          <div class='right'><strong>${EstimatorEngine.formatMoney(total)}</strong></div>
+                          <div>${EstimatorEngine.formatQty(qty)} $unit @ ${EstimatorEngine.formatMoney(rate, currency)}</div>
+                          <div class='right'><strong>${EstimatorEngine.formatMoney(total, currency)}</strong></div>
                         </div>
                         """.trimIndent()
                     }
@@ -99,6 +117,38 @@ object EstimatePrintHelper {
 
         val discount = draft.discountText.toDoubleOrNull() ?: 0.0
         val tax = draft.taxText.toDoubleOrNull() ?: 0.0
+        val isProposal = draft.docType == DocumentType.PROPOSAL
+        val docHeading = if (isProposal) "CLIENT PROPOSAL" else "PROJECT ESTIMATE"
+        val depositPct = draft.depositPercentText.toDoubleOrNull() ?: settings.defaultProposalDepositPct
+        val depositAmt = takeoff.grandTotal * (depositPct.coerceIn(0.0, 100.0) / 100.0)
+
+        val contactLines = listOfNotNull(
+            settings.companyPhone.takeIf { it.isNotBlank() },
+            settings.companyEmail.takeIf { it.isNotBlank() },
+            settings.companyAddress.takeIf { it.isNotBlank() },
+            settings.companyLicense.takeIf { it.isNotBlank() }?.let { "Lic: $it" }
+        ).joinToString(" · ")
+
+        val termsBlock = if (isProposal) {
+            val terms = draft.termsText.ifBlank { settings.defaultProposalTerms }
+            """
+            <div class="card">
+              <h3>Proposal Terms &amp; Deposit</h3>
+              <div class="meta">Status: <strong>${esc(draft.proposalStatus.label)}</strong>${if (draft.validUntil.isNotBlank()) " · Valid Until: <strong>${esc(draft.validUntil)}</strong>" else ""} · Deposit (${EstimatorEngine.formatQty(depositPct)}%): <strong>${EstimatorEngine.formatMoney(depositAmt, currency)}</strong></div>
+              <p class="note">${esc(terms)}</p>
+              ${
+                if (settings.includeSignatureBlockOnProposal) {
+                    """
+                    <div style="display:flex;gap:32px;margin-top:28px;">
+                      <div style="flex:1;border-top:1px solid #4d6278;padding-top:6px;font-size:12px;">Client Signature &amp; Date</div>
+                      <div style="flex:1;border-top:1px solid #4d6278;padding-top:6px;font-size:12px;">Contractor Approval &amp; Date</div>
+                    </div>
+                    """.trimIndent()
+                } else ""
+            }
+            </div>
+            """.trimIndent()
+        } else ""
 
         return """
         <!DOCTYPE html>
@@ -122,14 +172,19 @@ object EstimatePrintHelper {
         </head>
         <body>
           <div class="header">
-            <div>
-              <div class="brand">EZ ESTIMATOR — HOUSE DR</div>
-              <div class="sub">Room-by-Room Proposal</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              ${if (logoBase64 != null) "<img src='data:image/png;base64,$logoBase64' style='width:48px;height:48px;border-radius:8px;' />" else ""}
+              <div>
+                <div class="brand">${esc(settings.companyName.ifBlank { "EZ ESTIMATOR" })}</div>
+                <div class="sub">${esc(settings.companyTagline.ifBlank { docHeading })}</div>
+                ${if (contactLines.isNotBlank()) "<div class='sub'>${esc(contactLines)}</div>" else ""}
+              </div>
             </div>
             <div class="sub" style="text-align:right">
+              <div><strong>$docHeading</strong></div>
               <div><strong>Date:</strong> ${esc(draft.date)}</div>
               <div><strong>Customer:</strong> ${esc(draft.customer.ifBlank { "Customer" })}</div>
-              <div><strong>Project:</strong> ${esc(draft.project.ifBlank { "Estimate" })}</div>
+              <div><strong>Project:</strong> ${esc(draft.project.ifBlank { docHeading })}</div>
             </div>
           </div>
 
@@ -140,12 +195,13 @@ object EstimatePrintHelper {
           <div class="card">$materialsHtml</div>
 
           <div class="total-box">
-            <div class="sub">CUSTOMER ESTIMATE</div>
-            <div class="grand">${EstimatorEngine.formatMoney(takeoff.grandTotal)}</div>
-            <div class="line"><span>Services Subtotal</span><span></span><strong class="right">${EstimatorEngine.formatMoney(takeoff.serviceTotal)}</strong></div>
-            <div class="line"><span>Discount</span><span></span><strong class="right">-${EstimatorEngine.formatMoney(discount)}</strong></div>
+            <div class="sub">$docHeading TOTAL</div>
+            <div class="grand">${EstimatorEngine.formatMoney(takeoff.grandTotal, currency)}</div>
+            <div class="line"><span>Services Subtotal</span><span></span><strong class="right">${EstimatorEngine.formatMoney(takeoff.serviceTotal, currency)}</strong></div>
+            <div class="line"><span>Discount</span><span></span><strong class="right">-${EstimatorEngine.formatMoney(discount, currency)}</strong></div>
             <div class="line"><span>Tax (${EstimatorEngine.formatQty(tax)}%)</span><span></span><strong class="right">Included in Total</strong></div>
           </div>
+          $termsBlock
           <p class="note">Accuracy check: unknown conditions, unverified dimensions, structural work, and concealed damage should be verified on site before final pricing.</p>
         </body>
         </html>

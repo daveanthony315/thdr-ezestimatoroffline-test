@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,17 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.EstimatorEngine
-import com.example.model.MaterialCalcKind
 import com.example.ui.components.ThdrCard
 import com.example.ui.components.ThdrDoubleField
-import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrSubCard
@@ -61,30 +57,6 @@ fun MaterialsScreen(
 ) {
     var newMatName by remember { mutableStateOf("") }
     var newMatQty by remember { mutableDoubleStateOf(0.0) }
-
-    // V7 calculator states
-    var concL by remember { mutableDoubleStateOf(0.0) }
-    var concW by remember { mutableDoubleStateOf(0.0) }
-    var concT by remember { mutableDoubleStateOf(6.0) }
-
-    var cmuL by remember { mutableDoubleStateOf(0.0) }
-    var cmuH by remember { mutableDoubleStateOf(0.0) }
-
-    var frameL by remember { mutableDoubleStateOf(0.0) }
-    var frameH by remember { mutableDoubleStateOf(8.0) }
-
-    var dryWall by remember { mutableDoubleStateOf(0.0) }
-    var dryCeil by remember { mutableDoubleStateOf(0.0) }
-    var drySize by remember { mutableDoubleStateOf(32.0) }
-
-    var paintArea by remember { mutableDoubleStateOf(0.0) }
-    var paintWindows by remember { mutableDoubleStateOf(0.0) }
-    var paintDoors by remember { mutableDoubleStateOf(0.0) }
-    var paintCoats by remember { mutableDoubleStateOf(2.0) }
-
-    var floorArea by remember { mutableDoubleStateOf(0.0) }
-    var floorPatternLabel by remember { mutableStateOf("Standard inline — 10% waste") }
-    var floorPatternFactor by remember { mutableDoubleStateOf(1.10) }
 
     LazyColumn(
         modifier = Modifier
@@ -221,157 +193,42 @@ fun MaterialsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    val panels: List<@Composable () -> Unit> = listOf(
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.CONCRETE.title,
-                                note = "Uses 10% waste. Bag yields: 45 × 60-lb bags or 34 × 80-lb bags per cubic yard.",
-                                buttonText = "Calculate concrete",
-                                testTag = "calc_concrete_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(MaterialCalcKind.CONCRETE, concL, concW, concT)
-                                }
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ThdrDoubleField(concL, { concL = it }, "Length (ft)", Modifier.weight(1f), "conc_l")
-                                    ThdrDoubleField(concW, { concW = it }, "Width (ft)", Modifier.weight(1f), "conc_w")
-                                    ThdrDoubleField(concT, { concT = it }, "Thick (in)", Modifier.weight(1f), "conc_t")
-                                }
-                            }
-                        },
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.CMU.title,
-                                note = "Formula: wall area ÷ 0.89 × 1.05. Assumes standard 8 × 8 × 16 in CMU.",
-                                buttonText = "Calculate CMU",
-                                testTag = "calc_cmu_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(MaterialCalcKind.CMU, cmuL, cmuH)
-                                }
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ThdrDoubleField(cmuL, { cmuL = it }, "Wall length (ft)", Modifier.weight(1f), "cmu_l")
-                                    ThdrDoubleField(cmuH, { cmuH = it }, "Wall height (ft)", Modifier.weight(1f), "cmu_h")
-                                }
-                            }
-                        },
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.FRAMING.title,
-                                note = "Assumes 16 in. O.C.: (wall LF ÷ 1.33 + 1) × 1.15. Plate quantity assumes three continuous runs.",
-                                buttonText = "Calculate framing",
-                                testTag = "calc_framing_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(MaterialCalcKind.FRAMING, frameL, frameH)
-                                }
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ThdrDoubleField(frameL, { frameL = it }, "Wall length (LF)", Modifier.weight(1f), "frame_l")
-                                    ThdrDoubleField(frameH, { frameH = it }, "Wall height (ft)", Modifier.weight(1f), "frame_h")
-                                }
-                            }
-                        },
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.DRYWALL.title,
-                                note = "Uses the 10% allowance for cutoffs and seam trimming.",
-                                buttonText = "Calculate drywall",
-                                testTag = "calc_drywall_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(MaterialCalcKind.DRYWALL, dryWall, dryCeil, drySize)
-                                }
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        ThdrDoubleField(dryWall, { dryWall = it }, "Wall (SF)", Modifier.weight(1f), "dry_wall")
-                                        ThdrDoubleField(dryCeil, { dryCeil = it }, "Ceiling (SF)", Modifier.weight(1f), "dry_ceil")
-                                    }
-                                    ThdrDropdownField(
-                                        label = "Sheet size",
-                                        selectedLabel = if (drySize == 48.0) "4 × 12 (48 SF)" else "4 × 8 (32 SF)",
-                                        options = listOf("4 × 8 (32 SF)" to 32.0, "4 × 12 (48 SF)" to 48.0),
-                                        onOptionSelected = { drySize = it }
-                                    )
-                                }
-                            }
-                        },
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.PAINT.title,
-                                note = "Deductions: approx. 15 SF per standard window and 20 SF per entry door. Coverage: 350 SF per gallon per coat.",
-                                buttonText = "Calculate paint",
-                                testTag = "calc_paint_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(
-                                        MaterialCalcKind.PAINT,
-                                        paintArea, paintWindows, paintDoors, paintCoats
-                                    )
-                                }
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        ThdrDoubleField(paintArea, { paintArea = it }, "Surface (SF)", Modifier.weight(1f), "paint_area")
-                                        ThdrDoubleField(paintCoats, { paintCoats = it }, "Coats", Modifier.weight(1f), "paint_coats", isInteger = true)
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        ThdrDoubleField(paintWindows, { paintWindows = it }, "Windows", Modifier.weight(1f), "paint_win", isInteger = true)
-                                        ThdrDoubleField(paintDoors, { paintDoors = it }, "Doors", Modifier.weight(1f), "paint_doors", isInteger = true)
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            CalculatorPanel(
-                                title = MaterialCalcKind.FLOORING.title,
-                                note = "Uses pattern modifiers. Select the closest installation pattern.",
-                                buttonText = "Calculate flooring",
-                                testTag = "calc_flooring_btn",
-                                onCalculate = {
-                                    viewModel.runMaterialCalculator(MaterialCalcKind.FLOORING, floorArea, floorPatternFactor)
-                                }
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ThdrDoubleField(floorArea, { floorArea = it }, "Net floor area (SF)", testTag = "floor_area")
-                                    val patterns = listOf(
-                                        "Standard inline — 10% waste" to 1.10,
-                                        "Carpet / vinyl roll goods — 10% allowance" to 1.10,
-                                        "Diagonal / intricate — 15% waste" to 1.15,
-                                        "Complex herringbone / chevron — 20% waste" to 1.20
-                                    )
-                                    ThdrDropdownField(
-                                        label = "Material / pattern",
-                                        selectedLabel = floorPatternLabel,
-                                        options = patterns.map { it.first to it },
-                                        onOptionSelected = { (lbl, fac) ->
-                                            floorPatternLabel = lbl
-                                            floorPatternFactor = fac
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    )
-
-                    if (isWideScreen) {
-                        panels.chunked(2).forEach { pair ->
+                    ThdrSubCard {
+                        Text(
+                            text = "Measurement Formulas Reference",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = BrandCyan
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val formulas = listOf(
+                            "Floor area" to "Length × Width",
+                            "Ceiling area" to "Length × Width",
+                            "Wall area" to "(Length + Width) × 2 (× Height for wall SF)",
+                            "Linear footage" to "Sum of measured lengths + (Width × 2)",
+                            "Roofing squares" to "Roof area ÷ 100 (10×10 sqft / 100²ft)"
+                        )
+                        formulas.forEach { (name, formula) ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(modifier = Modifier.weight(1f)) { pair[0]() }
-                                Box(modifier = Modifier.weight(1f)) {
-                                    if (pair.size > 1) pair[1]() else Spacer(Modifier)
-                                }
+                                Text(name, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
+                                Text(
+                                    formula,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
+                                    color = BrandCyan,
+                                    textAlign = TextAlign.End
+                                )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            panels.forEach { panel -> panel() }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MaterialCalculatorsSection(viewModel = viewModel, isWideScreen = isWideScreen)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(color = OutlineSubtle)
@@ -471,38 +328,5 @@ fun MaterialsScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun CalculatorPanel(
-    title: String,
-    note: String,
-    buttonText: String,
-    testTag: String,
-    onCalculate: () -> Unit,
-    inputs: @Composable () -> Unit
-) {
-    ThdrSubCard {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = BrandCyan
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        inputs()
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = note,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        ThdrPrimaryButton(
-            text = buttonText,
-            onClick = onCalculate,
-            modifier = Modifier.fillMaxWidth(),
-            testTag = testTag
-        )
     }
 }

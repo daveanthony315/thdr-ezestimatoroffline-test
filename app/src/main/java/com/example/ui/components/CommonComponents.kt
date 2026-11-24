@@ -15,14 +15,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
@@ -61,51 +62,34 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentOrange
-import com.example.ui.theme.BlueprintBg
-import com.example.ui.theme.BlueprintSurface
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCobalt
-import com.example.ui.theme.BrandCobaltDeep
-import com.example.ui.theme.BrandCyan
-import com.example.ui.theme.DangerBg
-import com.example.ui.theme.DangerRed
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.LocalThdrPalette
 
 @Composable
 fun BlueprintBackdrop(
+    showBlueprintGrid: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BlueprintBg)
+            .background(palette.bg)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.bg_blueprint),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(0.28f)
-        )
+        if (showBlueprintGrid) {
+            Image(
+                painter = painterResource(id = R.drawable.bg_blueprint),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (palette.isDark) 0.28f else 0.08f)
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xB800286B),
-                            Color(0xCC021436),
-                            Color(0xA64D2512)
-                        )
-                    )
-                )
+                .background(Brush.linearGradient(colors = palette.backdropGradient))
         )
         content()
     }
@@ -114,8 +98,14 @@ fun BlueprintBackdrop(
 @Composable
 fun ThdrHeaderBar(
     savedStatus: String,
+    companyName: String = "EZ ESTIMATOR",
+    companyTagline: String = "HOUSE DR · INTERIOR / EXTERIOR",
+    onLogoClick: (() -> Unit)? = null,
+    onOpenCustomers: (() -> Unit)? = null,
+    onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalThdrPalette.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = Color.Transparent
@@ -123,27 +113,28 @@ fun ThdrHeaderBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            BlueprintSurface.copy(alpha = 0.96f),
-                            BlueprintBg.copy(alpha = 0.96f),
-                            Color(0xB8713C20)
-                        )
-                    )
-                )
-                .border(width = 0.5.dp, color = OutlineBlue)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .background(Brush.horizontalGradient(colors = palette.headerGradient))
+                .border(width = 0.5.dp, color = palette.outline)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .then(
+                        if (onLogoClick != null) {
+                            Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = onLogoClick)
+                                .padding(end = 6.dp)
+                        } else Modifier
+                    )
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.thdr_logo),
-                    contentDescription = "THDR House DR logo",
+                    contentDescription = "Company logo",
                     modifier = Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -151,42 +142,75 @@ fun ThdrHeaderBar(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
-                        text = "EZ ESTIMATOR",
+                        text = companyName.ifBlank { "EZ ESTIMATOR" }.uppercase(),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp
                         ),
-                        color = BrandCyan,
+                        color = palette.brandHighlight,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "HOUSE DR · INTERIOR / EXTERIOR",
+                        text = companyTagline.ifBlank { "HOUSE DR · INTERIOR / EXTERIOR" }.uppercase(),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            letterSpacing = 1.2.sp,
+                            letterSpacing = 1.1.sp,
                             fontSize = 10.sp
                         ),
-                        color = TextMuted,
+                        color = palette.textMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            Surface(
-                shape = RoundedCornerShape(99.dp),
-                color = BlueprintSurfaceVariant.copy(alpha = 0.9f),
-                border = BorderStroke(1.dp, OutlineSubtle)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
-                    text = savedStatus,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted,
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                        .testTag("header_saved_status"),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = palette.surfaceVariant.copy(alpha = 0.9f),
+                    border = BorderStroke(1.dp, palette.outlineSubtle)
+                ) {
+                    Text(
+                        text = savedStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = palette.textMuted,
+                        modifier = Modifier
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
+                            .testTag("header_saved_status"),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (onOpenCustomers != null) {
+                    IconButton(
+                        onClick = onOpenCustomers,
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .testTag("header_customers_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.People,
+                            contentDescription = "Customers",
+                            tint = palette.textPrimary
+                        )
+                    }
+                }
+                if (onOpenSettings != null) {
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .testTag("header_settings_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = palette.textPrimary
+                        )
+                    }
+                }
             }
         }
     }
@@ -198,20 +222,13 @@ fun ThdrCard(
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        BlueprintSurface.copy(alpha = 0.97f),
-                        BlueprintBg.copy(alpha = 0.96f),
-                        Color(0x30E26C1A)
-                    )
-                )
-            )
-            .border(1.dp, OutlineBlue, RoundedCornerShape(18.dp))
+            .background(Brush.linearGradient(colors = palette.cardGradient))
+            .border(1.dp, palette.outline, RoundedCornerShape(18.dp))
             .padding(contentPadding)
     ) {
         Column(modifier = Modifier.fillMaxWidth(), content = content)
@@ -224,12 +241,13 @@ fun ThdrSubCard(
     contentPadding: PaddingValues = PaddingValues(14.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(BlueprintSurfaceVariant.copy(alpha = 0.92f))
-            .border(1.dp, OutlineSubtle, RoundedCornerShape(14.dp))
+            .background(palette.surfaceVariant.copy(alpha = 0.94f))
+            .border(1.dp, palette.outlineSubtle, RoundedCornerShape(14.dp))
             .padding(contentPadding)
     ) {
         Column(modifier = Modifier.fillMaxWidth(), content = content)
@@ -245,10 +263,11 @@ fun ThdrPrimaryButton(
     enabled: Boolean = true,
     orangeAccent: Boolean = false
 ) {
+    val palette = LocalThdrPalette.current
     val brush = if (orangeAccent) {
-        Brush.horizontalGradient(listOf(AccentOrange, AccentAmber))
+        Brush.horizontalGradient(listOf(palette.accent, palette.accentSecondary))
     } else {
-        Brush.horizontalGradient(listOf(BrandCobalt, BrandCobaltDeep, AccentOrange))
+        Brush.horizontalGradient(listOf(palette.primary, palette.primaryDeep, palette.accent))
     }
     Button(
         onClick = onClick,
@@ -256,8 +275,8 @@ fun ThdrPrimaryButton(
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
-            contentColor = TextPrimary,
-            disabledContainerColor = BlueprintSurfaceVariant
+            contentColor = Color.White,
+            disabledContainerColor = palette.surfaceVariant
         ),
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
@@ -269,7 +288,7 @@ fun ThdrPrimaryButton(
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
-            color = TextPrimary,
+            color = Color.White,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -285,14 +304,15 @@ fun ThdrSecondaryButton(
     testTag: String = "",
     enabled: Boolean = true
 ) {
+    val palette = LocalThdrPalette.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, OutlineBlue),
+        border = BorderStroke(1.dp, palette.outline),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = BlueprintSurfaceVariant.copy(alpha = 0.85f),
-            contentColor = TextPrimary
+            containerColor = palette.surfaceVariant.copy(alpha = 0.88f),
+            contentColor = palette.textPrimary
         ),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         modifier = modifier
@@ -315,13 +335,14 @@ fun ThdrDangerButton(
     modifier: Modifier = Modifier,
     testTag: String = ""
 ) {
+    val palette = LocalThdrPalette.current
     OutlinedButton(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.7f)),
+        border = BorderStroke(1.dp, palette.danger.copy(alpha = 0.7f)),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = DangerBg,
-            contentColor = TextPrimary
+            containerColor = palette.dangerBg,
+            contentColor = if (palette.isDark) palette.textPrimary else palette.danger
         ),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         modifier = modifier
@@ -338,20 +359,22 @@ fun ThdrDangerButton(
 }
 
 @Composable
-fun thdrTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = TextPrimary,
-    unfocusedTextColor = TextPrimary,
-    disabledTextColor = TextMuted,
-    focusedContainerColor = BlueprintSurfaceVariant,
-    unfocusedContainerColor = BlueprintSurfaceVariant,
-    disabledContainerColor = BlueprintSurfaceVariant.copy(alpha = 0.6f),
-    focusedBorderColor = BrandCyan,
-    unfocusedBorderColor = OutlineBlue,
-    disabledBorderColor = OutlineSubtle,
-    focusedLabelColor = BrandCyan,
-    unfocusedLabelColor = TextMuted,
-    cursorColor = BrandCyan
-)
+fun thdrTextFieldColors() = LocalThdrPalette.current.let { palette ->
+    OutlinedTextFieldDefaults.colors(
+        focusedTextColor = palette.textPrimary,
+        unfocusedTextColor = palette.textPrimary,
+        disabledTextColor = palette.textMuted,
+        focusedContainerColor = palette.surfaceVariant,
+        unfocusedContainerColor = palette.surfaceVariant,
+        disabledContainerColor = palette.surfaceVariant.copy(alpha = 0.6f),
+        focusedBorderColor = palette.brandHighlight,
+        unfocusedBorderColor = palette.outline,
+        disabledBorderColor = palette.outlineSubtle,
+        focusedLabelColor = palette.brandHighlight,
+        unfocusedLabelColor = palette.textMuted,
+        cursorColor = palette.brandHighlight
+    )
+}
 
 @Composable
 fun ThdrTextField(
@@ -364,12 +387,13 @@ fun ThdrTextField(
     minLines: Int = 1,
     testTag: String = ""
 ) {
+    val palette = LocalThdrPalette.current
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         placeholder = if (placeholder.isNotEmpty()) {
-            { Text(placeholder, color = TextMuted.copy(alpha = 0.7f)) }
+            { Text(placeholder, color = palette.textMuted.copy(alpha = 0.7f)) }
         } else null,
         singleLine = singleLine,
         minLines = minLines,
@@ -463,6 +487,7 @@ fun <T> ThdrDropdownField(
     modifier: Modifier = Modifier,
     testTag: String = ""
 ) {
+    val palette = LocalThdrPalette.current
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -489,11 +514,11 @@ fun <T> ThdrDropdownField(
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = BlueprintSurfaceVariant
+            containerColor = palette.surfaceVariant
         ) {
             options.forEach { (itemLabel, itemValue) ->
                 DropdownMenuItem(
-                    text = { Text(itemLabel, color = TextPrimary) },
+                    text = { Text(itemLabel, color = palette.textPrimary) },
                     onClick = {
                         expanded = false
                         onOptionSelected(itemValue)
@@ -512,10 +537,11 @@ fun SelectablePill(
     modifier: Modifier = Modifier,
     testTag: String = ""
 ) {
+    val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(99.dp),
-        color = if (selected) BrandCobalt else BlueprintSurfaceVariant,
-        border = BorderStroke(1.dp, if (selected) BrandCyan else OutlineBlue),
+        color = if (selected) palette.primary else palette.surfaceVariant,
+        border = BorderStroke(1.dp, if (selected) palette.brandHighlight else palette.outline),
         modifier = modifier
             .defaultMinSize(minHeight = 40.dp)
             .clip(RoundedCornerShape(99.dp))
@@ -529,7 +555,7 @@ fun SelectablePill(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
-                color = TextPrimary,
+                color = if (selected) Color.White else palette.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -545,11 +571,12 @@ fun ConfirmActionDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = BlueprintSurface,
-        titleContentColor = TextPrimary,
-        textContentColor = TextMuted,
+        containerColor = palette.surface,
+        titleContentColor = palette.textPrimary,
+        textContentColor = palette.textMuted,
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
@@ -558,14 +585,14 @@ fun ConfirmActionDialog(
                     onConfirm()
                     onDismiss()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandCobalt)
+                colors = ButtonDefaults.buttonColors(containerColor = palette.primary)
             ) {
-                Text(confirmText, color = TextPrimary)
+                Text(confirmText, color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextMuted)
+                Text("Cancel", color = palette.textMuted)
             }
         }
     )
@@ -580,12 +607,13 @@ fun PromptInputDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     var input by remember { mutableStateOf(initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = BlueprintSurface,
-        titleContentColor = TextPrimary,
-        textContentColor = TextPrimary,
+        containerColor = palette.surface,
+        titleContentColor = palette.textPrimary,
+        textContentColor = palette.textPrimary,
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             ThdrTextField(
@@ -603,14 +631,14 @@ fun PromptInputDialog(
                         onDismiss()
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandCobalt)
+                colors = ButtonDefaults.buttonColors(containerColor = palette.primary)
             ) {
-                Text(confirmText, color = TextPrimary)
+                Text(confirmText, color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextMuted)
+                Text("Cancel", color = palette.textMuted)
             }
         }
     )

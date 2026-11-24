@@ -22,6 +22,8 @@ data class RoomDimensions(
 data class RoomServiceSelection(
     val serviceName: String,
     val selectedPbItemName: String = "",
+    val overrideUnit: String = "",
+    val overrideMeasurementBasis: String = "",
     val quantity: Double = 0.0,
     val quantityManual: Boolean = false,
     val rate: Double = 0.0,
@@ -31,6 +33,9 @@ data class RoomServiceSelection(
     val questionAnswers: Map<String, List<String>> = emptyMap()
 ) {
     val lineTotal: Double get() = quantity * rate
+
+    fun effectiveUnit(defaultUnit: String): String =
+        overrideUnit.trim().ifEmpty { defaultUnit }
 }
 
 data class EstimateRoom(
@@ -52,9 +57,15 @@ data class EstimateRoom(
 
 data class EstimateDraft(
     val id: Long? = null,
+    val docType: DocumentType = DocumentType.ESTIMATE,
+    val customerId: Long? = null,
     val customer: String = "",
     val project: String = "",
     val date: String = "",
+    val validUntil: String = "",
+    val proposalStatus: ProposalStatus = ProposalStatus.DRAFT,
+    val depositPercentText: String = "25",
+    val termsText: String = "",
     val estimateSide: EstimateSide = EstimateSide.INTERIOR,
     val detailsVisible: Boolean = false,
     val rooms: List<EstimateRoom> = emptyList(),
@@ -65,6 +76,8 @@ data class EstimateDraft(
 
 data class SavedProposal(
     val id: Long = 0,
+    val docType: DocumentType = DocumentType.ESTIMATE,
+    val status: ProposalStatus = ProposalStatus.DRAFT,
     val customer: String,
     val project: String,
     val date: String,
@@ -99,7 +112,8 @@ enum class MaterialCalcKind(val title: String) {
     FRAMING("Framing — Studs & Plates"),
     DRYWALL("Drywall — Sheet Takeoff"),
     PAINT("Paint — Gallons & Openings"),
-    FLOORING("Flooring & Tile — Pattern Waste")
+    FLOORING("Flooring & Tile — Pattern Waste"),
+    ROOFING("Roofing & Room Area — Squares")
 }
 
 data class CalcResultRow(

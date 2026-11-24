@@ -1,10 +1,13 @@
 package com.example
 
 import com.example.domain.EstimatorEngine
+import com.example.model.AppSettings
+import com.example.model.DocumentType
 import com.example.model.EstimateRoom
 import com.example.model.EstimateSide
 import com.example.model.MaterialCalcKind
 import com.example.model.PriceBookItem
+import com.example.model.ProposalStatus
 import com.example.model.RoomServiceSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -108,5 +111,59 @@ class EstimatorEngineTest {
         val extPaint = EstimatorEngine.pbItemsForService("Exterior Painting", pb)
         assertEquals(1, extPaint.size)
         assertTrue(extPaint.first().item == "Deck Staining")
+    }
+
+    @Test
+    fun appSettingsOverrideWasteFactorsAndCurrencyFormatting() {
+        val customSettings = AppSettings(
+            defaultFlooringWastePct = 20,
+            defaultDrywallWastePct = 15,
+            currencySymbol = "£"
+        )
+        assertEquals("£1,250.50", EstimatorEngine.formatMoney(1250.5, customSettings.currencySymbol))
+
+        val room = EstimateRoom(
+            id = "r_custom",
+            name = "Living Room",
+            side = EstimateSide.INTERIOR,
+            lengthFt = 10.0,
+            widthFt = 10.0,
+            heightFt = 8.0,
+            services = listOf("Flooring"),
+            serviceSelections = mapOf(
+                "Flooring" to RoomServiceSelection(
+                    serviceName = "Flooring",
+                    quantity = 100.0,
+                    rate = 5.0,
+                    rateInitialized = true
+                )
+            )
+        )
+        val pb = listOf(
+            PriceBookItem(
+                category = "006 Flooring",
+                item = "LVP Plank Install",
+                unit = "SF",
+                laborRate = 85.0,
+                benchmarkUnitPrice = 5.0
+            )
+        )
+        val takeoff = EstimatorEngine.computeTakeoff(
+            rooms = listOf(room),
+            priceBook = pb,
+            manualMaterials = emptyMap(),
+            discount = 0.0,
+            taxPercent = 0.0,
+            settings = customSettings
+        )
+        assertEquals(120.0, takeoff.materials["Flooring (SF incl. 20% waste)"] ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun documentTypeAndProposalStatusRoundTripKeys() {
+        assertEquals(DocumentType.PROPOSAL, DocumentType.fromKey("proposal"))
+        assertEquals(DocumentType.ESTIMATE, DocumentType.fromKey("unknown"))
+        assertEquals(ProposalStatus.APPROVED, ProposalStatus.fromKey("approved"))
+        assertEquals(ProposalStatus.DRAFT, ProposalStatus.fromKey(null))
     }
 }

@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -36,38 +37,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.domain.EstimatorEngine
+import com.example.model.DocumentType
 import com.example.model.EstimateCatalog
 import com.example.model.EstimateSide
 import com.example.model.SavedProposal
 import com.example.ui.components.ConfirmActionDialog
 import com.example.ui.components.ThdrCard
-import com.example.ui.components.ThdrDangerButton
 import com.example.ui.components.ThdrDoubleField
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSecondaryButton
-import com.example.ui.components.ThdrSubCard
-import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.AccentOrange
-import com.example.ui.theme.BlueprintBg
-import com.example.ui.theme.BlueprintSurface
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCobalt
-import com.example.ui.theme.BrandCyan
 import com.example.ui.theme.JetBrainsMono
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.LocalThdrPalette
 import com.example.viewmodel.EstimatorUiState
 import com.example.viewmodel.EstimatorViewModel
 
@@ -76,11 +67,14 @@ import com.example.viewmodel.EstimatorViewModel
 fun EstimatorScreen(
     state: EstimatorUiState,
     viewModel: EstimatorViewModel,
-    isWideScreen: Boolean
+    isWideScreen: Boolean,
+    onOpenSavedList: (DocumentType) -> Unit = {}
 ) {
+    val palette = LocalThdrPalette.current
     val context = LocalContext.current
     var proposalToDelete by remember { mutableStateOf<SavedProposal?>(null) }
     val draft = state.draft
+    val currency = state.settings.currencySymbol
     val visibleRooms = remember(draft.rooms, draft.estimateSide) {
         draft.rooms.withIndex().filter { it.value.side == draft.estimateSide }
     }
@@ -95,52 +89,13 @@ fun EstimatorScreen(
     ) {
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
-                ThdrCard {
-                    Text(
-                        text = "EZ Estimator",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.estimate_intro),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (isWideScreen) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CreateEstimateTile(
-                                state = state,
-                                viewModel = viewModel,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SavedProposalsTile(
-                                proposals = state.savedProposals,
-                                onOpen = { viewModel.loadSavedProposal(it) },
-                                onRequestDelete = { proposalToDelete = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    } else {
-                        CreateEstimateTile(
-                            state = state,
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SavedProposalsTile(
-                            proposals = state.savedProposals,
-                            onOpen = { viewModel.loadSavedProposal(it) },
-                            onRequestDelete = { proposalToDelete = it },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
+                EstimatorDocumentHeaderSection(
+                    state = state,
+                    viewModel = viewModel,
+                    isWideScreen = isWideScreen,
+                    onRequestDeleteSaved = { proposalToDelete = it },
+                    onOpenSavedList = onOpenSavedList
+                )
             }
         }
 
@@ -151,7 +106,7 @@ fun EstimatorScreen(
                     Text(
                         text = stringResource(R.string.choose_estimate_area),
                         style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
+                        color = palette.textPrimary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -183,14 +138,14 @@ fun EstimatorScreen(
                         Text(
                             text = stringResource(R.string.add_a_room),
                             style = MaterialTheme.typography.titleSmall,
-                            color = TextPrimary,
+                            color = palette.textPrimary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
                             text = stringResource(R.string.add_room_note),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -212,14 +167,14 @@ fun EstimatorScreen(
                         Text(
                             text = stringResource(R.string.add_exterior_area),
                             style = MaterialTheme.typography.titleSmall,
-                            color = TextPrimary,
+                            color = palette.textPrimary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
                             text = stringResource(R.string.add_exterior_note),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -242,7 +197,39 @@ fun EstimatorScreen(
             }
         }
 
-        // Room Cards for selected side
+        // Room Cards for selected side (or mascot prompt when empty)
+        if (visibleRooms.isEmpty()) {
+            item {
+                Box(modifier = Modifier.widthIn(max = 980.dp)) {
+                    ThdrCard {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.thdr_mascot_badge),
+                                contentDescription = "House DR Estimator Mascot",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "No ${draft.estimateSide.label.lowercase()} areas added yet",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = palette.textPrimary
+                                )
+                                Text(
+                                    text = "Select a room or exterior area button above to enter dimensions, services, and materials.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = palette.textMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
         itemsIndexed(visibleRooms, key = { _, pair -> pair.value.id }) { _, indexedRoom ->
             val originalIndex = indexedRoom.index
             val room = indexedRoom.value
@@ -261,6 +248,8 @@ fun EstimatorScreen(
                     onRoomNotesChange = { viewModel.updateRoomNotes(room.id, it) },
                     onToggleService = { viewModel.toggleRoomService(room.id, it) },
                     onSelectPbItem = { svc, pbItem -> viewModel.selectServicePbItem(room.id, svc, pbItem) },
+                    onSelectPricingUnit = { svc, unit -> viewModel.updateServicePricingUnit(room.id, svc, unit) },
+                    onSelectMeasurementBasis = { svc, basis -> viewModel.updateServiceMeasurementBasis(room.id, svc, basis) },
                     onServiceQtyChange = { svc, qty -> viewModel.updateServiceQty(room.id, svc, qty) },
                     onResetQty = { svc -> viewModel.resetServiceQtyToMeasurement(room.id, svc) },
                     onServiceRateChange = { svc, rate -> viewModel.updateServiceRate(room.id, svc, rate) },
@@ -280,26 +269,26 @@ fun EstimatorScreen(
                     Text(
                         text = stringResource(R.string.materials_needed_title),
                         style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Text(
                         text = stringResource(R.string.materials_needed_sub),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     if (state.takeoff.materials.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, OutlineSubtle, RoundedCornerShape(12.dp))
+                                .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
                                 .padding(20.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = stringResource(R.string.materials_needed_empty),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted,
+                                color = palette.textMuted,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -315,88 +304,100 @@ fun EstimatorScreen(
                                 Text(
                                     text = name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
+                                    color = palette.textPrimary,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = EstimatorEngine.formatQty(qty),
                                     style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                                    color = BrandCyan,
+                                    color = palette.brandHighlight,
                                     modifier = Modifier.padding(horizontal = 12.dp)
                                 )
                                 Text(
                                     text = "calculated",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = TextMuted
+                                    color = palette.textMuted
                                 )
                             }
-                            HorizontalDivider(color = OutlineSubtle)
+                            HorizontalDivider(color = palette.outlineSubtle)
                         }
                     }
                 }
             }
         }
 
-        // Estimate Summary
+        // Estimate / Proposal Summary
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
                 ThdrCard {
+                    val isProposal = draft.docType == DocumentType.PROPOSAL
                     Text(
-                        text = stringResource(R.string.estimate_summary_title),
+                        text = if (isProposal) "Proposal Summary" else stringResource(R.string.estimate_summary_title),
                         style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Total highlight box
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(15.dp))
                             .background(
                                 Brush.horizontalGradient(
-                                    colors = listOf(BrandCobalt, BlueprintSurface, Color(0xFF713C20))
+                                    colors = listOf(palette.primary, palette.primaryDeep, palette.accent.copy(alpha = 0.72f))
                                 )
                             )
-                            .border(1.dp, OutlineBlue, RoundedCornerShape(15.dp))
+                            .border(1.dp, palette.outline, RoundedCornerShape(15.dp))
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.customer_estimate_label),
+                            text = if (isProposal) "CLIENT PROPOSAL TOTAL" else stringResource(R.string.customer_estimate_label),
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted
+                            color = Color.White.copy(alpha = 0.85f)
                         )
                         Text(
-                            text = EstimatorEngine.formatMoney(state.takeoff.grandTotal),
+                            text = EstimatorEngine.formatMoney(state.takeoff.grandTotal, currency),
                             style = MaterialTheme.typography.displaySmall.copy(
                                 fontFamily = JetBrainsMono,
                                 fontWeight = FontWeight.Black
                             ),
-                            color = BrandCyan,
+                            color = Color.White,
                             modifier = Modifier.testTag("grand_total_text")
                         )
+                        if (isProposal) {
+                            val depPct = (draft.depositPercentText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 100.0)
+                            if (depPct > 0.0) {
+                                val depAmt = state.takeoff.grandTotal * (depPct / 100.0)
+                                Text(
+                                    text = "Deposit Due (${EstimatorEngine.formatQty(depPct)}%): ${EstimatorEngine.formatMoney(depAmt, currency)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(alpha = 0.92f),
+                                    modifier = Modifier.testTag("proposal_deposit_due_text")
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.services_label), color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.services_label), color = Color.White, style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                EstimatorEngine.formatMoney(state.takeoff.serviceTotal),
-                                color = TextPrimary,
+                                EstimatorEngine.formatMoney(state.takeoff.serviceTotal, currency),
+                                color = Color.White,
                                 style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
                                 modifier = Modifier.testTag("service_total_text")
                             )
                         }
-                        HorizontalDivider(color = OutlineSubtle, modifier = Modifier.padding(vertical = 6.dp))
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.25f), modifier = Modifier.padding(vertical = 6.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.materials_extra_label), color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.materials_extra_label), color = Color.White, style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                EstimatorEngine.formatMoney(0.0),
-                                color = TextPrimary,
+                                EstimatorEngine.formatMoney(0.0, currency),
+                                color = Color.White,
                                 style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono)
                             )
                         }
@@ -410,7 +411,7 @@ fun EstimatorScreen(
                         ThdrDoubleField(
                             value = draft.discountText.toDoubleOrNull() ?: 0.0,
                             onValueChange = { viewModel.updateDiscount(it.toString()) },
-                            label = stringResource(R.string.discount_label),
+                            label = "Discount ($currency)",
                             modifier = Modifier.weight(1f),
                             testTag = "discount_input"
                         )
@@ -428,21 +429,23 @@ fun EstimatorScreen(
                         "No services selected."
                     } else {
                         state.takeoff.serviceBreakdown.entries.joinToString(" · ") { (k, v) ->
-                            "$k ${EstimatorEngine.formatMoney(v)}"
+                            "$k ${EstimatorEngine.formatMoney(v, currency)}"
                         }
                     }
                     Text(
                         text = "Service pricing breakdown: $breakdownText",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "INTERNAL ONLY · Estimated job cost: ${EstimatorEngine.formatMoney(state.takeoff.jobCost)} · Gross profit: ${EstimatorEngine.formatMoney(state.takeoff.grossProfit)}",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        color = TextMuted,
-                        modifier = Modifier.testTag("internal_cost_profit_text")
-                    )
+                    if (state.settings.showInternalCostProfit) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "INTERNAL ONLY · Estimated job cost: ${EstimatorEngine.formatMoney(state.takeoff.jobCost, currency)} · Gross profit: ${EstimatorEngine.formatMoney(state.takeoff.grossProfit, currency)}",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = palette.textMuted,
+                            modifier = Modifier.testTag("internal_cost_profit_text")
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Row(
@@ -450,8 +453,9 @@ fun EstimatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ThdrPrimaryButton(
-                            text = stringResource(R.string.btn_save_estimate),
+                            text = if (isProposal) "Save Proposal" else stringResource(R.string.btn_save_estimate),
                             onClick = { viewModel.saveCurrentEstimate() },
+                            orangeAccent = isProposal,
                             modifier = Modifier.weight(1f),
                             testTag = "save_estimate_button"
                         )
@@ -468,7 +472,7 @@ fun EstimatorScreen(
                         Text(
                             text = state.saveMessage,
                             style = MaterialTheme.typography.bodySmall,
-                            color = BrandCyan,
+                            color = palette.brandHighlight,
                             modifier = Modifier.testTag("save_message_text")
                         )
                     }
@@ -479,158 +483,12 @@ fun EstimatorScreen(
 
     proposalToDelete?.let { target ->
         ConfirmActionDialog(
-            title = "Delete Saved Proposal?",
-            message = "Remove \"${target.project.ifBlank { target.customer }.ifBlank { "Proposal" }}\" permanently from this device?",
+            title = "Delete Saved ${target.docType.title}?",
+            message = "Remove \"${target.project.ifBlank { target.customer }.ifBlank { target.docType.title }}\" permanently from this device?",
             confirmText = "Delete",
             onConfirm = { viewModel.deleteSavedProposal(target.id) },
             onDismiss = { proposalToDelete = null }
         )
-    }
-}
-
-@Composable
-private fun CreateEstimateTile(
-    state: EstimatorUiState,
-    viewModel: EstimatorViewModel,
-    modifier: Modifier = Modifier
-) {
-    val draft = state.draft
-    ThdrSubCard(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.create_estimate_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.create_estimate_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        ThdrPrimaryButton(
-            text = stringResource(R.string.btn_create_estimate),
-            onClick = { viewModel.createNewEstimate() },
-            testTag = "create_estimate_button"
-        )
-
-        if (draft.detailsVisible) {
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = OutlineSubtle)
-            Spacer(modifier = Modifier.height(12.dp))
-            ThdrTextField(
-                value = draft.customer,
-                onValueChange = viewModel::updateCustomer,
-                label = "Customer name",
-                placeholder = "Customer name",
-                testTag = "customer_name_input"
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            ThdrTextField(
-                value = draft.project,
-                onValueChange = viewModel::updateProject,
-                label = "Project name",
-                placeholder = "Project / address",
-                testTag = "project_name_input"
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            ThdrTextField(
-                value = draft.date,
-                onValueChange = viewModel::updateDate,
-                label = "Estimate date (YYYY-MM-DD)",
-                placeholder = "2026-11-24",
-                testTag = "estimate_date_input"
-            )
-        }
-    }
-}
-
-@Composable
-private fun SavedProposalsTile(
-    proposals: List<SavedProposal>,
-    onOpen: (SavedProposal) -> Unit,
-    onRequestDelete: (SavedProposal) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    ThdrSubCard(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.saved_proposals_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.saved_proposals_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        if (proposals.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, OutlineSubtle, RoundedCornerShape(10.dp))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_saved_proposals),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
-                )
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                proposals.forEachIndexed { idx, item ->
-                    val title = item.project.ifBlank { item.customer }.ifBlank { "Proposal ${idx + 1}" }
-                    val who = item.customer.ifBlank { "Customer not named" }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(BlueprintBg.copy(alpha = 0.55f))
-                            .border(1.dp, OutlineSubtle, RoundedCornerShape(10.dp))
-                            .padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "$who · ${item.date}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = EstimatorEngine.formatMoney(item.total),
-                                style = MaterialTheme.typography.labelLarge.copy(fontFamily = JetBrainsMono),
-                                color = BrandCyan
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ThdrSecondaryButton(
-                                text = "Open",
-                                onClick = { onOpen(item) },
-                                testTag = "open_proposal_${item.id}"
-                            )
-                            ThdrDangerButton(
-                                text = "Delete",
-                                onClick = { onRequestDelete(item) },
-                                testTag = "delete_proposal_${item.id}"
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -641,12 +499,13 @@ private fun SideToggleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) AccentOrange.copy(alpha = 0.24f) else BlueprintSurfaceVariant,
+        color = if (selected) palette.accent.copy(alpha = 0.24f) else palette.surfaceVariant,
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
-            color = if (selected) AccentOrange else OutlineBlue
+            color = if (selected) palette.accent else palette.outline
         ),
         modifier = modifier
             .defaultMinSize(minHeight = 48.dp)
@@ -663,7 +522,7 @@ private fun SideToggleButton(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
                 ),
-                color = TextPrimary
+                color = palette.textPrimary
             )
         }
     }
@@ -675,10 +534,11 @@ private fun AreaAddButton(
     onClick: () -> Unit,
     testTag: String
 ) {
+    val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = Color(0x18FFFFFF),
-        border = BorderStroke(1.dp, OutlineBlue),
+        color = palette.surfaceHigh.copy(alpha = 0.6f),
+        border = BorderStroke(1.dp, palette.outline),
         modifier = Modifier
             .defaultMinSize(minHeight = 48.dp)
             .clip(RoundedCornerShape(10.dp))
@@ -692,7 +552,7 @@ private fun AreaAddButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = TextPrimary
+                color = palette.textPrimary
             )
         }
     }

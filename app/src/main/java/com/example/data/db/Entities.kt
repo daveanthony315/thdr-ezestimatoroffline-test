@@ -3,7 +3,10 @@ package com.example.data.db
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.model.CategoryMeta
+import com.example.model.Customer
+import com.example.model.DocumentType
 import com.example.model.PriceBookItem
+import com.example.model.ProposalStatus
 import com.example.model.SavedProposal
 import com.example.model.TimeframeBenchmark
 
@@ -156,6 +159,8 @@ data class TimeframeEntity(
 @Entity(tableName = "saved_estimates")
 data class SavedEstimateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val docType: String = "estimate",
+    val status: String = "draft",
     val customer: String,
     val project: String,
     val date: String,
@@ -165,6 +170,8 @@ data class SavedEstimateEntity(
 ) {
     fun toModel() = SavedProposal(
         id = id,
+        docType = DocumentType.fromKey(docType),
+        status = ProposalStatus.fromKey(status),
         customer = customer,
         project = project,
         date = date,
@@ -173,3 +180,45 @@ data class SavedEstimateEntity(
         payloadJson = payloadJson
     )
 }
+
+@Entity(tableName = "customers")
+data class CustomerEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val company: String = "",
+    val phone: String = "",
+    val email: String = "",
+    val address: String = "",
+    val notes: String = "",
+    val createdAt: String = ""
+) {
+    fun toModel() = Customer(
+        id = id,
+        name = name,
+        company = company,
+        phone = phone,
+        email = email,
+        address = address,
+        notes = notes,
+        createdAt = createdAt
+    )
+
+    companion object {
+        fun fromModel(customer: Customer) = CustomerEntity(
+            id = customer.id,
+            name = customer.name,
+            company = customer.company,
+            phone = customer.phone,
+            email = customer.email,
+            address = customer.address,
+            notes = customer.notes,
+            createdAt = customer.createdAt
+        )
+    }
+}
+
+@Entity(tableName = "app_settings")
+data class AppSettingsEntity(
+    @PrimaryKey val id: Int = 1,
+    val payloadJson: String
+)

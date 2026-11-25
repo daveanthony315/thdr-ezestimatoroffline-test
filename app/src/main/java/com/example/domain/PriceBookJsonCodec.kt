@@ -361,6 +361,7 @@ object PriceBookJsonCodec {
             put("defaultProposalDepositPct", settings.defaultProposalDepositPct)
             put("defaultProposalTerms", settings.defaultProposalTerms)
             put("includeSignatureBlockOnProposal", settings.includeSignatureBlockOnProposal)
+            put("privacyPolicyUrl", settings.privacyPolicyUrl)
         }.toString()
     }
 
@@ -393,7 +394,8 @@ object PriceBookJsonCodec {
             defaultProposalValidDays = root.optInt("defaultProposalValidDays", defaults.defaultProposalValidDays),
             defaultProposalDepositPct = root.optDouble("defaultProposalDepositPct", defaults.defaultProposalDepositPct).finiteOrZero(),
             defaultProposalTerms = root.optString("defaultProposalTerms", defaults.defaultProposalTerms),
-            includeSignatureBlockOnProposal = root.optBoolean("includeSignatureBlockOnProposal", defaults.includeSignatureBlockOnProposal)
+            includeSignatureBlockOnProposal = root.optBoolean("includeSignatureBlockOnProposal", defaults.includeSignatureBlockOnProposal),
+            privacyPolicyUrl = root.optString("privacyPolicyUrl", defaults.privacyPolicyUrl)
         )
     }
 

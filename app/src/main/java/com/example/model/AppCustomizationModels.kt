@@ -112,5 +112,6 @@ data class AppSettings(
     val defaultProposalValidDays: Int = 30,
     val defaultProposalDepositPct: Double = 25.0,
     val defaultProposalTerms: String = "Pricing valid for 30 days. Work begins upon written approval and deposit. Concealed damage or scope changes require written change order.",
-    val includeSignatureBlockOnProposal: Boolean = true
+    val includeSignatureBlockOnProposal: Boolean = true,
+    val privacyPolicyUrl: String = ""
 )

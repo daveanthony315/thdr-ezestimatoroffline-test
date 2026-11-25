@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <!-- Customer PII, estimates, and proposals stay strictly on-device -->
+        <exclude domain="database" path="thdr_estimator_db" />
+        <exclude domain="database" path="thdr_estimator_db-wal" />
+        <exclude domain="database" path="thdr_estimator_db-shm" />
+    </cloud-backup>
+    <device-transfer>
+        <!-- Exclude local customer and proposal database from automated device transfer -->
+        <exclude domain="database" path="thdr_estimator_db" />
+        <exclude domain="database" path="thdr_estimator_db-wal" />
+        <exclude domain="database" path="thdr_estimator_db-shm" />
+    </device-transfer>
+</data-extraction-rules>

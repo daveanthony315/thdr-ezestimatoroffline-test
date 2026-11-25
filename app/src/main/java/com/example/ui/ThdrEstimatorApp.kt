@@ -57,6 +57,7 @@ import com.example.ui.screens.EstimatorScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MaterialsScreen
 import com.example.ui.screens.PriceBookScreen
+import com.example.ui.screens.PrivacyPolicyScreen
 import com.example.ui.screens.SavedDocumentsScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.LocalThdrPalette
@@ -71,6 +72,7 @@ object AppRoutes {
     const val ROUTE_PRICEBOOK = "pricebook"
     const val ROUTE_MATERIALS = "materials"
     const val ROUTE_SETTINGS = "settings"
+    const val ROUTE_PRIVACY_POLICY = "privacy_policy"
 }
 
 private enum class TopDestination(
@@ -302,6 +304,9 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     onOpenSavedDocument = { doc ->
                                         viewModel.loadSavedProposal(doc)
                                         navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
+                                    },
+                                    onOpenPrivacyPolicy = {
+                                        navigateSubScreen(AppRoutes.ROUTE_PRIVACY_POLICY)
                                     }
                                 )
                             }
@@ -392,7 +397,16 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                             composable(AppRoutes.ROUTE_SETTINGS) {
                                 SettingsScreen(
                                     state = state,
-                                    viewModel = viewModel
+                                    viewModel = viewModel,
+                                    onOpenPrivacyPolicy = {
+                                        navigateSubScreen(AppRoutes.ROUTE_PRIVACY_POLICY)
+                                    }
+                                )
+                            }
+                            composable(AppRoutes.ROUTE_PRIVACY_POLICY) {
+                                PrivacyPolicyScreen(
+                                    settings = state.settings,
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
                         }

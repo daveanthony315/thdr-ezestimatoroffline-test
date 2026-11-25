@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Customer PII, estimates, and proposals stay strictly on-device -->
+    <exclude domain="database" path="thdr_estimator_db" />
+    <exclude domain="database" path="thdr_estimator_db-wal" />
+    <exclude domain="database" path="thdr_estimator_db-shm" />
+</full-backup-content>

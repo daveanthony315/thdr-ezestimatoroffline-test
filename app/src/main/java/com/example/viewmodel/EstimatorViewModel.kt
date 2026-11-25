@@ -426,12 +426,17 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun printCurrentEstimate(context: Context) {
         val state = uiState.value
+        val matchedCustomer = state.customers.firstOrNull { cust ->
+            (state.draft.customerId != null && cust.id == state.draft.customerId) ||
+                (state.draft.customer.isNotBlank() && cust.name.equals(state.draft.customer, ignoreCase = true))
+        }
         EstimatePrintHelper.printEstimate(
             context = context,
             draft = state.draft,
             takeoff = state.takeoff,
             priceBook = state.priceBookItems,
-            settings = state.settings
+            settings = state.settings,
+            customer = matchedCustomer
         )
     }
 
@@ -448,12 +453,17 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
             taxPercent = tax,
             settings = state.settings
         )
+        val matchedCustomer = state.customers.firstOrNull { cust ->
+            (decoded.customerId != null && cust.id == decoded.customerId) ||
+                (decoded.customer.isNotBlank() && cust.name.equals(decoded.customer, ignoreCase = true))
+        }
         EstimatePrintHelper.printEstimate(
             context = context,
             draft = decoded.copy(docType = saved.docType, proposalStatus = saved.status),
             takeoff = takeoff,
             priceBook = state.priceBookItems,
-            settings = state.settings
+            settings = state.settings,
+            customer = matchedCustomer
         )
     }
 

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +52,8 @@ import com.example.ui.components.SelectablePill
 import com.example.ui.components.ThdrCard
 import com.example.ui.components.ThdrDangerButton
 import com.example.ui.components.ThdrDoubleField
+import com.example.ui.components.ThdrPrimaryButton
+import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrSubCard
 import com.example.ui.components.ThdrTextField
 import com.example.ui.theme.LocalThdrPalette
@@ -61,9 +64,11 @@ import com.example.viewmodel.EstimatorViewModel
 @Composable
 fun SettingsScreen(
     state: EstimatorUiState,
-    viewModel: EstimatorViewModel
+    viewModel: EstimatorViewModel,
+    onOpenPrivacyPolicy: () -> Unit = {}
 ) {
     val palette = LocalThdrPalette.current
+    val context = LocalContext.current
     val settings = state.settings
     var showResetDialog by remember { mutableStateOf(false) }
 
@@ -542,7 +547,53 @@ fun SettingsScreen(
             }
         }
 
-        // 6. Reset Settings
+        // 6. Privacy Policy & Backups
+        item {
+            Box(modifier = Modifier.widthIn(max = 980.dp)) {
+                ThdrCard {
+                    Text(
+                        text = "6. Privacy Policy & Data Handling",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = palette.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Customer records, estimates, and proposals stay locally on your device and are excluded from automatic cloud backups (allowBackup=\"false\").",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.textMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    ThdrTextField(
+                        value = settings.privacyPolicyUrl,
+                        onValueChange = { v -> viewModel.updateSettings { it.copy(privacyPolicyUrl = v) } },
+                        label = "Published Privacy Policy URL (https://...)",
+                        testTag = "settings_privacy_url"
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ThdrPrimaryButton(
+                            text = "View Privacy Policy",
+                            onClick = onOpenPrivacyPolicy,
+                            testTag = "settings_view_privacy_btn",
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isValidHttpUrl(settings.privacyPolicyUrl)) {
+                            ThdrSecondaryButton(
+                                text = "Open Web URL",
+                                onClick = { openExternalUrl(context, settings.privacyPolicyUrl) },
+                                testTag = "settings_open_privacy_url_btn",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. Reset Settings
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
                 ThdrCard {

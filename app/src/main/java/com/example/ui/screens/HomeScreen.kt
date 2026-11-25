@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -75,7 +76,8 @@ fun HomeScreen(
     onOpenPriceBook: () -> Unit,
     onOpenMaterials: () -> Unit,
     onResumeActiveDraft: () -> Unit,
-    onOpenSavedDocument: (SavedProposal) -> Unit
+    onOpenSavedDocument: (SavedProposal) -> Unit,
+    onOpenPrivacyPolicy: () -> Unit = {}
 ) {
     val palette = LocalThdrPalette.current
     val currency = state.settings.currencySymbol
@@ -450,6 +452,20 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Privacy Policy link footer
+        item {
+            Box(modifier = Modifier.widthIn(max = 980.dp)) {
+                DashboardActionTile(
+                    title = "Privacy Policy & Data Controls",
+                    subtitle = "On-device storage, backup rules & deletion info",
+                    icon = Icons.Default.Lock,
+                    onClick = onOpenPrivacyPolicy,
+                    testTag = "home_privacy_policy_btn",
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

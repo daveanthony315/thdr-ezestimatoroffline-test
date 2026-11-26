@@ -23,8 +23,7 @@ import com.example.ui.components.ThdrDoubleField
 import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSubCard
-import com.example.ui.theme.BrandCyan
-import com.example.ui.theme.TextMuted
+import com.example.ui.theme.LocalThdrPalette
 import com.example.viewmodel.EstimatorViewModel
 
 @Composable
@@ -246,11 +245,12 @@ private fun CalculatorPanel(
     onCalculate: () -> Unit,
     inputs: @Composable () -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     ThdrSubCard {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            color = BrandCyan
+            color = palette.brandHighlight
         )
         Spacer(modifier = Modifier.height(8.dp))
         inputs()
@@ -258,7 +258,7 @@ private fun CalculatorPanel(
         Text(
             text = note,
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
+            color = palette.textMuted
         )
         Spacer(modifier = Modifier.height(8.dp))
         ThdrPrimaryButton(

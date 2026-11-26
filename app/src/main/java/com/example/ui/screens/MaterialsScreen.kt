@@ -41,11 +41,8 @@ import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrSubCard
 import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.BrandCyan
 import com.example.ui.theme.JetBrainsMono
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.LocalThdrPalette
 import com.example.viewmodel.EstimatorUiState
 import com.example.viewmodel.EstimatorViewModel
 
@@ -55,6 +52,7 @@ fun MaterialsScreen(
     viewModel: EstimatorViewModel,
     isWideScreen: Boolean
 ) {
+    val palette = LocalThdrPalette.current
     var newMatName by remember { mutableStateOf("") }
     var newMatQty by remember { mutableDoubleStateOf(0.0) }
 
@@ -73,13 +71,13 @@ fun MaterialsScreen(
                     Text(
                         text = "Materials",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.materials_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -88,14 +86,14 @@ fun MaterialsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, OutlineSubtle, RoundedCornerShape(12.dp))
+                                .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
                                 .padding(20.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "Materials will appear after services and measurements are entered.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted,
+                                color = palette.textMuted,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -112,19 +110,19 @@ fun MaterialsScreen(
                                 Text(
                                     text = name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
+                                    color = palette.textPrimary,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = EstimatorEngine.formatQty(qty),
                                     style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                                    color = BrandCyan,
+                                    color = palette.brandHighlight,
                                     modifier = Modifier.padding(horizontal = 10.dp)
                                 )
                                 Text(
                                     text = "qty",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = TextMuted
+                                    color = palette.textMuted
                                 )
                                 if (isManual) {
                                     IconButton(
@@ -133,12 +131,12 @@ fun MaterialsScreen(
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Remove custom material",
-                                            tint = TextMuted
+                                            tint = palette.textMuted
                                         )
                                     }
                                 }
                             }
-                            HorizontalDivider(color = OutlineSubtle)
+                            HorizontalDivider(color = palette.outlineSubtle)
                         }
                     }
 
@@ -185,13 +183,13 @@ fun MaterialsScreen(
                     Text(
                         text = stringResource(R.string.calc_tools_title),
                         style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.calc_tools_sub),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -199,7 +197,7 @@ fun MaterialsScreen(
                         Text(
                             text = "Measurement Formulas Reference",
                             style = MaterialTheme.typography.titleSmall,
-                            color = BrandCyan
+                            color = palette.brandHighlight
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         val formulas = listOf(
@@ -216,11 +214,11 @@ fun MaterialsScreen(
                                     .padding(vertical = 3.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(name, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
+                                Text(name, style = MaterialTheme.typography.bodySmall, color = palette.textPrimary)
                                 Text(
                                     formula,
                                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
-                                    color = BrandCyan,
+                                    color = palette.brandHighlight,
                                     textAlign = TextAlign.End
                                 )
                             }
@@ -231,13 +229,13 @@ fun MaterialsScreen(
                     MaterialCalculatorsSection(viewModel = viewModel, isWideScreen = isWideScreen)
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = OutlineSubtle)
+                    HorizontalDivider(color = palette.outlineSubtle)
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = "Calculator Results",
                         style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -263,14 +261,14 @@ fun MaterialsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, OutlineSubtle, RoundedCornerShape(12.dp))
+                                .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
                                 .padding(18.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "Run a calculator to see material quantities here.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted
+                                color = palette.textMuted
                             )
                         }
                     } else {
@@ -281,11 +279,11 @@ fun MaterialsScreen(
                                     .padding(vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Material / takeoff", style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.weight(2f))
-                                Text("Qty", style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.weight(0.7f), textAlign = TextAlign.End)
-                                Text("Unit", style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.weight(0.7f), textAlign = TextAlign.End)
+                                Text("Material / takeoff", style = MaterialTheme.typography.labelSmall, color = palette.textMuted, modifier = Modifier.weight(2f))
+                                Text("Qty", style = MaterialTheme.typography.labelSmall, color = palette.textMuted, modifier = Modifier.weight(0.7f), textAlign = TextAlign.End)
+                                Text("Unit", style = MaterialTheme.typography.labelSmall, color = palette.textMuted, modifier = Modifier.weight(0.7f), textAlign = TextAlign.End)
                             }
-                            HorizontalDivider(color = OutlineSubtle)
+                            HorizontalDivider(color = palette.outlineSubtle)
                             state.calcResults.forEach { row ->
                                 Row(
                                     modifier = Modifier
@@ -296,25 +294,25 @@ fun MaterialsScreen(
                                     Text(
                                         text = row.name,
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = TextPrimary,
+                                        color = palette.textPrimary,
                                         modifier = Modifier.weight(2f)
                                     )
                                     Text(
                                         text = row.displayQty,
                                         style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                                        color = BrandCyan,
+                                        color = palette.brandHighlight,
                                         textAlign = TextAlign.End,
                                         modifier = Modifier.weight(0.7f)
                                     )
                                     Text(
                                         text = row.unit,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextMuted,
+                                        color = palette.textMuted,
                                         textAlign = TextAlign.End,
                                         modifier = Modifier.weight(0.7f)
                                     )
                                 }
-                                HorizontalDivider(color = OutlineSubtle)
+                                HorizontalDivider(color = palette.outlineSubtle)
                             }
                         }
                     }
@@ -323,7 +321,7 @@ fun MaterialsScreen(
                     Text(
                         text = stringResource(R.string.calc_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                 }
             }

@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -185,38 +187,41 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                 },
                 bottomBar = {
                     if (!useRail) {
-                        NavigationBar(
-                            containerColor = palette.surface.copy(alpha = 0.97f),
-                            contentColor = palette.textPrimary
-                        ) {
-                            TopDestination.entries.forEach { dest ->
-                                val selected = currentRoute == dest.route ||
-                                    (dest == TopDestination.ESTIMATE && currentRoute == AppRoutes.ROUTE_SAVED_ESTIMATES)
-                                NavigationBarItem(
-                                    selected = selected,
-                                    onClick = { navigateTopLevel(dest.route) },
-                                    icon = {
-                                        Icon(
-                                            imageVector = dest.icon,
-                                            contentDescription = dest.label
-                                        )
-                                    },
-                                    label = {
-                                        Text(
-                                            text = dest.label,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = palette.brandHighlight,
-                                        selectedTextColor = palette.accent,
-                                        indicatorColor = palette.bg,
-                                        unselectedIconColor = palette.textMuted,
-                                        unselectedTextColor = palette.textMuted
-                                    ),
-                                    modifier = Modifier.testTag(dest.testTag)
-                                )
+                        Column {
+                            HorizontalDivider(thickness = 1.dp, color = palette.outlineSubtle)
+                            NavigationBar(
+                                containerColor = palette.surface.copy(alpha = 0.98f),
+                                contentColor = palette.textPrimary
+                            ) {
+                                TopDestination.entries.forEach { dest ->
+                                    val selected = currentRoute == dest.route ||
+                                        (dest == TopDestination.ESTIMATE && currentRoute == AppRoutes.ROUTE_SAVED_ESTIMATES)
+                                    NavigationBarItem(
+                                        selected = selected,
+                                        onClick = { navigateTopLevel(dest.route) },
+                                        icon = {
+                                            Icon(
+                                                imageVector = dest.icon,
+                                                contentDescription = dest.label
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = dest.label,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = if (palette.isDark) palette.brandHighlight else palette.primary,
+                                            selectedTextColor = palette.accent,
+                                            indicatorColor = palette.surfaceHigh,
+                                            unselectedIconColor = palette.textMuted,
+                                            unselectedTextColor = palette.textMuted
+                                        ),
+                                        modifier = Modifier.testTag(dest.testTag)
+                                    )
+                                }
                             }
                         }
                     }
@@ -229,7 +234,7 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                 ) {
                     if (useRail) {
                         NavigationRail(
-                            containerColor = palette.surface.copy(alpha = 0.94f),
+                            containerColor = palette.surface.copy(alpha = 0.96f),
                             contentColor = palette.textPrimary,
                             modifier = Modifier.fillMaxHeight()
                         ) {
@@ -247,9 +252,9 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     },
                                     label = { Text(dest.label) },
                                     colors = NavigationRailItemDefaults.colors(
-                                        selectedIconColor = palette.brandHighlight,
+                                        selectedIconColor = if (palette.isDark) palette.brandHighlight else palette.primary,
                                         selectedTextColor = palette.accent,
-                                        indicatorColor = palette.bg,
+                                        indicatorColor = palette.surfaceHigh,
                                         unselectedIconColor = palette.textMuted,
                                         unselectedTextColor = palette.textMuted
                                     ),

@@ -57,17 +57,8 @@ import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrSubCard
 import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.AccentOrange
-import com.example.ui.theme.BlueprintSurfaceHigh
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCobalt
-import com.example.ui.theme.BrandCyan
 import com.example.ui.theme.JetBrainsMono
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.WarningAmber
+import com.example.ui.theme.LocalThdrPalette
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -95,6 +86,7 @@ fun RoomEditorCard(
     onToggleServiceSub: (String, String) -> Unit,
     onSetQuestionAnswer: (String, String, String, Boolean) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     val dims = remember(room.lengthFt, room.widthFt, room.heightFt) {
         EstimatorEngine.computeDimensions(room)
     }
@@ -117,20 +109,20 @@ fun RoomEditorCard(
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = Color.Transparent,
-                    border = BorderStroke(1.dp, OutlineBlue),
+                    border = BorderStroke(1.dp, palette.outline),
                     modifier = Modifier.padding(end = 10.dp)
                 ) {
                     Icon(
                         imageVector = if (room.expanded) Icons.Default.Remove else Icons.Default.Add,
                         contentDescription = if (room.expanded) "Collapse area" else "Expand area",
-                        tint = BrandCyan,
+                        tint = palette.brandHighlight,
                         modifier = Modifier.padding(4.dp)
                     )
                 }
                 Text(
                     text = room.name.ifBlank { "Area ${roomIndex + 1}" },
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
+                    color = palette.textPrimary
                 )
             }
             ThdrDangerButton(
@@ -211,7 +203,7 @@ fun RoomEditorCard(
                     fontFamily = JetBrainsMono,
                     fontWeight = FontWeight.SemiBold
                 ),
-                color = BrandCyan,
+                color = palette.brandHighlight,
                 modifier = Modifier.testTag("room_measurements_$roomIndex")
             )
 
@@ -274,7 +266,7 @@ fun RoomEditorCard(
             Text(
                 text = "Overall condition",
                 style = MaterialTheme.typography.labelMedium,
-                color = TextMuted
+                color = palette.textMuted
             )
             Spacer(modifier = Modifier.height(6.dp))
             FlowRow(
@@ -296,7 +288,7 @@ fun RoomEditorCard(
                 Text(
                     text = "Select services",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary
+                    color = palette.textPrimary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 FlowRow(
@@ -356,13 +348,13 @@ fun RoomEditorCard(
                 Icon(
                     imageVector = Icons.Default.Warning,
                     contentDescription = "Accuracy check warning",
-                    tint = WarningAmber,
+                    tint = palette.warning,
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 Text(
                     text = "Accuracy check: unknown conditions, unverified dimensions, structural work, and concealed damage should be verified on site before final pricing.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = WarningAmber
+                    color = palette.warning
                 )
             }
         }
@@ -378,23 +370,24 @@ private fun ExteriorServicePicker(
     onToggleService: (String) -> Unit,
     onSelectPbItem: (String, String) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(BlueprintSurfaceHigh.copy(alpha = 0.7f))
-            .border(1.dp, OutlineBlue, RoundedCornerShape(12.dp))
+            .background(palette.surfaceHigh.copy(alpha = 0.7f))
+            .border(1.dp, palette.outline, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
         Text(
             text = "Exterior services",
             style = MaterialTheme.typography.titleSmall,
-            color = TextPrimary
+            color = palette.textPrimary
         )
         Text(
             text = "Choose the services for this work area. Select a service to reveal its Price Book subcategories.",
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
+            color = palette.textMuted
         )
         Spacer(modifier = Modifier.height(8.dp))
         FlowRow(
@@ -417,7 +410,7 @@ private fun ExteriorServicePicker(
             Text(
                 text = "${if (s == "Decks") "Decks & Porches" else s} subcategories",
                 style = MaterialTheme.typography.labelMedium,
-                color = BrandCyan
+                color = palette.brandHighlight
             )
             Spacer(modifier = Modifier.height(6.dp))
             FlowRow(

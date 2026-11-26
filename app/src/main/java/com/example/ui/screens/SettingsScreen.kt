@@ -125,7 +125,7 @@ fun SettingsScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(if (palette.isDark) Color.Transparent else Color(0xFF101827))
+                                        .background(if (palette.isDark) Color.Transparent else palette.primaryDeep)
                                         .padding(
                                             horizontal = if (palette.isDark) 0.dp else 8.dp,
                                             vertical = if (palette.isDark) 0.dp else 4.dp

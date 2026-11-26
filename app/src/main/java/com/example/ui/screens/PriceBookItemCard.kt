@@ -44,16 +44,8 @@ import com.example.ui.components.ThdrDoubleField
 import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentOrangeContainer
-import com.example.ui.theme.BlueprintSurfaceHigh
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCyan
 import com.example.ui.theme.JetBrainsMono
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.LocalThdrPalette
 import java.util.Locale
 
 @Composable
@@ -76,6 +68,7 @@ fun CategoryBulkEditorCard(
         materialIncluded: Boolean
     ) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     var expanded by remember(categoryName) { mutableStateOf(false) }
     var description by remember(categoryName, initialDescription) { mutableStateOf(initialDescription) }
     var unit by remember(categoryName, sampleItem?.unit) { mutableStateOf(sampleItem?.unit ?: "EA") }
@@ -94,8 +87,8 @@ fun CategoryBulkEditorCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(AccentOrangeContainer.copy(alpha = 0.72f))
-            .border(1.dp, AccentAmber.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .background(palette.warningContainer)
+            .border(1.dp, palette.accent.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
             .padding(10.dp)
     ) {
         Row(
@@ -110,13 +103,13 @@ fun CategoryBulkEditorCard(
             Text(
                 text = "Edit category information & apply to all subcategories",
                 style = MaterialTheme.typography.titleSmall,
-                color = AccentAmber,
+                color = palette.warning,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = "Toggle category bulk editor",
-                tint = AccentAmber
+                tint = palette.warning
             )
         }
 
@@ -216,7 +209,7 @@ fun CategoryBulkEditorCard(
             Text(
                 text = "Applies the fields above to every subcategory in this service. Individual items can still be edited afterward.",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
+                color = palette.textMuted
             )
         }
     }
@@ -247,6 +240,7 @@ fun PriceBookSubcategoryCard(
     onUpdateItem: (PriceBookItem) -> Unit,
     onDeleteItem: (Long) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     var expanded by remember(item.id) { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -257,13 +251,13 @@ fun PriceBookSubcategoryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(BlueprintSurfaceVariant)
-            .border(1.dp, OutlineSubtle, RoundedCornerShape(12.dp))
+            .background(palette.surfaceVariant)
+            .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(BlueprintSurfaceHigh.copy(alpha = 0.7f))
+                .background(palette.surfaceHigh.copy(alpha = 0.7f))
                 .clickable { expanded = !expanded }
                 .padding(12.dp)
         ) {
@@ -276,18 +270,18 @@ fun PriceBookSubcategoryCard(
                     Text(
                         text = item.item,
                         style = MaterialTheme.typography.titleSmall,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Text(
                         text = "${item.unit} · ${effectiveBasis.label} · ${item.crewAssumption} · ${item.marketSection}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = "Toggle line item",
-                    tint = BrandCyan
+                    tint = palette.brandHighlight
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -436,15 +430,15 @@ fun PriceBookSubcategoryCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(BlueprintSurfaceHigh.copy(alpha = 0.85f))
-                            .border(1.dp, OutlineBlue, RoundedCornerShape(10.dp))
+                            .background(palette.surfaceHigh.copy(alpha = 0.85f))
+                            .border(1.dp, palette.outline, RoundedCornerShape(10.dp))
                             .padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = "Hourly pricing formula",
                             style = MaterialTheme.typography.titleSmall,
-                            color = BrandCyan
+                            color = palette.brandHighlight
                         )
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             ThdrDoubleField(
@@ -463,7 +457,7 @@ fun PriceBookSubcategoryCard(
                         Text(
                             text = "Total: ${EstimatorEngine.formatMoney(item.hourlyRate * item.estimatedCompletionHours)}",
                             style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                            color = BrandCyan
+                            color = palette.brandHighlight
                         )
                     }
                 }
@@ -496,15 +490,16 @@ private fun MetricMiniCell(
     modifier: Modifier = Modifier,
     highlight: Boolean = false
 ) {
+    val palette = LocalThdrPalette.current
     Column(modifier = modifier) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextMuted)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = palette.textMuted)
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontFamily = JetBrainsMono,
                 fontWeight = if (highlight) FontWeight.Bold else FontWeight.Medium
             ),
-            color = if (highlight) BrandCyan else TextPrimary
+            color = if (highlight) palette.brandHighlight else palette.textPrimary
         )
     }
 }
@@ -515,6 +510,7 @@ fun TimeframeBenchmarkCard(
     onUpdate: (TimeframeBenchmark) -> Unit,
     onDelete: (Long) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     var expanded by remember(tf.id) { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -522,8 +518,8 @@ fun TimeframeBenchmarkCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(BlueprintSurfaceVariant)
-            .border(1.dp, OutlineSubtle, RoundedCornerShape(12.dp))
+            .background(palette.surfaceVariant)
+            .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -537,18 +533,18 @@ fun TimeframeBenchmarkCard(
                 Text(
                     text = tf.projectType,
                     style = MaterialTheme.typography.titleSmall,
-                    color = BrandCyan
+                    color = palette.brandHighlight
                 )
                 Text(
                     text = "${tf.crewCalendar} · ${EstimatorEngine.formatQty(tf.lowHours)}–${EstimatorEngine.formatQty(tf.highHours)} labor hours",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                    color = palette.textMuted
                 )
             }
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = "Toggle timeframe benchmark",
-                tint = BrandCyan
+                tint = palette.brandHighlight
             )
         }
 

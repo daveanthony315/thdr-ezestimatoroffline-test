@@ -83,7 +83,7 @@ fun BlueprintBackdrop(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(if (palette.isDark) 0.28f else 0.08f)
+                    .alpha(if (palette.isDark) 0.24f else 0.15f)
             )
         }
         Box(
@@ -147,7 +147,7 @@ fun ThdrHeaderBar(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp
                         ),
-                        color = palette.brandHighlight,
+                        color = palette.headerText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -157,7 +157,7 @@ fun ThdrHeaderBar(
                             letterSpacing = 1.1.sp,
                             fontSize = 10.sp
                         ),
-                        color = palette.textMuted,
+                        color = palette.headerMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -169,13 +169,13 @@ fun ThdrHeaderBar(
             ) {
                 Surface(
                     shape = RoundedCornerShape(99.dp),
-                    color = palette.surfaceVariant.copy(alpha = 0.9f),
-                    border = BorderStroke(1.dp, palette.outlineSubtle)
+                    color = Color.White.copy(alpha = 0.16f),
+                    border = BorderStroke(1.dp, palette.headerMuted.copy(alpha = 0.65f))
                 ) {
                     Text(
                         text = savedStatus,
                         style = MaterialTheme.typography.labelSmall,
-                        color = palette.textMuted,
+                        color = palette.headerText,
                         modifier = Modifier
                             .padding(horizontal = 9.dp, vertical = 5.dp)
                             .testTag("header_saved_status"),
@@ -193,7 +193,7 @@ fun ThdrHeaderBar(
                         Icon(
                             imageVector = Icons.Default.People,
                             contentDescription = "Customers",
-                            tint = palette.textPrimary
+                            tint = palette.headerText
                         )
                     }
                 }
@@ -207,7 +207,7 @@ fun ThdrHeaderBar(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = palette.textPrimary
+                            tint = palette.headerText
                         )
                     }
                 }

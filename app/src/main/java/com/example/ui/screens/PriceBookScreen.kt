@@ -55,15 +55,7 @@ import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.BlueprintBg
-import com.example.ui.theme.BlueprintSurface
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCobalt
-import com.example.ui.theme.BrandCyan
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.OutlineSubtle
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.LocalThdrPalette
 import com.example.viewmodel.EstimatorUiState
 import com.example.viewmodel.EstimatorViewModel
 import java.util.Locale
@@ -76,6 +68,7 @@ fun PriceBookScreen(
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddSubcategoryPickerDialog by remember { mutableStateOf(false) }
     var addSubToCategory by remember { mutableStateOf<String?>(null) }
@@ -170,13 +163,13 @@ fun PriceBookScreen(
                     Text(
                         text = "Price Book",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.pricebook_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -197,14 +190,14 @@ fun PriceBookScreen(
                                 .fillMaxWidth()
                                 .padding(top = 4.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(BlueprintSurfaceVariant)
-                                .border(1.dp, OutlineBlue, RoundedCornerShape(10.dp))
+                                .background(palette.surfaceVariant)
+                                .border(1.dp, palette.outline, RoundedCornerShape(10.dp))
                         ) {
                             suggestions.forEach { s ->
                                 Text(
                                     text = s,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
+                                    color = palette.textPrimary,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
@@ -213,7 +206,7 @@ fun PriceBookScreen(
                                         }
                                         .padding(horizontal = 12.dp, vertical = 10.dp)
                                 )
-                                HorizontalDivider(color = OutlineSubtle)
+                                HorizontalDivider(color = palette.outlineSubtle)
                             }
                         }
                     }
@@ -267,13 +260,13 @@ fun PriceBookScreen(
                     Text(
                         text = "Base labor rate: $85.00 / labor hour · Customer-facing units: SF, LF, EA, STEP, ROOM, and other listed units.",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = BrandCyan
+                        color = palette.brandHighlight
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.pricebook_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -317,7 +310,7 @@ fun PriceBookScreen(
                     Text(
                         text = "${state.categories.size} service categories · ${state.priceBookItems.size} subcategories / line items · ${filteredItems.size} matching items",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        color = BrandCyan,
+                        color = palette.brandHighlight,
                         modifier = Modifier.testTag("pb_stats_text")
                     )
                 }
@@ -332,7 +325,7 @@ fun PriceBookScreen(
                         Text(
                             text = "No services or line items match the selected search and category filter.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextMuted
+                            color = palette.textMuted
                         )
                     }
                 }
@@ -346,17 +339,18 @@ fun PriceBookScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(15.dp))
-                            .background(BlueprintSurface.copy(alpha = 0.94f))
-                            .border(1.dp, OutlineBlue, RoundedCornerShape(15.dp))
+                            .background(palette.surface.copy(alpha = 0.96f))
+                            .border(1.dp, palette.outline, RoundedCornerShape(15.dp))
                     ) {
+                        val headerColors = if (palette.isDark) {
+                            listOf(palette.primary.copy(alpha = 0.65f), palette.surface, palette.accent.copy(alpha = 0.24f))
+                        } else {
+                            listOf(palette.surfaceHigh, palette.surface, palette.accent.copy(alpha = 0.14f))
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(BrandCobalt.copy(alpha = 0.65f), BlueprintSurface, Color(0x66713C20))
-                                    )
-                                )
+                                .background(Brush.horizontalGradient(headerColors))
                                 .clickable { viewModel.togglePbCategoryExpanded(category.name) }
                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                 .testTag("pb_category_header_${category.name}"),
@@ -367,18 +361,18 @@ fun PriceBookScreen(
                                 Text(
                                     text = category.name,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = BrandCyan
+                                    color = palette.brandHighlight
                                 )
                                 Text(
                                     text = "${catItems.size} matching subcategories",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextMuted
+                                    color = palette.textMuted
                                 )
                             }
                             Icon(
                                 imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                 contentDescription = "Toggle category",
-                                tint = BrandCyan
+                                tint = palette.brandHighlight
                             )
                         }
 
@@ -441,7 +435,7 @@ fun PriceBookScreen(
                                     Text(
                                         text = "No subcategories match this filter.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextMuted,
+                                        color = palette.textMuted,
                                         modifier = Modifier.padding(8.dp)
                                     )
                                 } else {
@@ -470,13 +464,13 @@ fun PriceBookScreen(
                     Text(
                         text = "Price Book changes",
                         style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = state.pbSaveStatus,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted,
+                        color = palette.textMuted,
                         modifier = Modifier.testTag("pb_save_status")
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -497,13 +491,13 @@ fun PriceBookScreen(
                     Text(
                         text = "Project Timeframe Benchmarks",
                         style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Planning ranges for complete scopes. Scheduling references, not promised completion dates.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     ThdrTextField(
@@ -535,7 +529,7 @@ fun PriceBookScreen(
                         Text(
                             text = "No timeframe benchmarks match this search.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted
+                            color = palette.textMuted
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -553,7 +547,7 @@ fun PriceBookScreen(
                     Text(
                         text = "Calendar duration depends on crew size, sequencing, drying/curing, inspections, material availability, and trade coordination. Labor hours are total labor input, not elapsed clock hours.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                 }
             }
@@ -575,9 +569,9 @@ fun PriceBookScreen(
         var itemName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showAddSubcategoryPickerDialog = false },
-            containerColor = BlueprintSurface,
-            titleContentColor = TextPrimary,
-            textContentColor = TextPrimary,
+            containerColor = palette.surface,
+            titleContentColor = palette.textPrimary,
+            textContentColor = palette.textPrimary,
             title = { Text("Add Subcategory / Line Item") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -602,14 +596,14 @@ fun PriceBookScreen(
                             showAddSubcategoryPickerDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandCobalt)
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.primary)
                 ) {
-                    Text("Add", color = TextPrimary)
+                    Text("Add", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddSubcategoryPickerDialog = false }) {
-                    Text("Cancel", color = TextMuted)
+                    Text("Cancel", color = palette.textMuted)
                 }
             }
         )

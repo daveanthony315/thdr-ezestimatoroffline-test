@@ -104,64 +104,91 @@ fun HomeScreen(
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
                 ThdrCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, palette.outline, RoundedCornerShape(14.dp))
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (palette.isDark) Color.Transparent else Color(0xFF101827))
-                                    .padding(
-                                        horizontal = if (palette.isDark) 0.dp else 10.dp,
-                                        vertical = if (palette.isDark) 0.dp else 6.dp
+                        Image(
+                            painter = painterResource(id = R.drawable.bg_blueprint),
+                            contentDescription = "House DR Architectural Blueprint",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .matchParentSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            palette.primaryDeep.copy(alpha = 0.94f),
+                                            palette.primary.copy(alpha = 0.84f),
+                                            palette.primaryDeep.copy(alpha = 0.72f)
+                                        )
                                     )
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.thdr_brand_logo),
-                                    contentDescription = "The Home Improvement House DR Logo",
-                                    contentScale = ContentScale.Fit,
+                                )
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Box(
                                     modifier = Modifier
-                                        .height(52.dp)
-                                        .widthIn(max = 170.dp)
-                                        .testTag("home_brand_logo")
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(palette.primaryDeep.copy(alpha = 0.90f))
+                                        .border(1.dp, palette.headerMuted.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.thdr_brand_logo),
+                                        contentDescription = "The Home Improvement House DR Logo",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .height(48.dp)
+                                            .widthIn(max = 165.dp)
+                                            .testTag("home_brand_logo")
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = state.settings.companyName.ifBlank { "EZ ESTIMATOR" },
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = palette.headerText,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = state.settings.companyTagline.ifBlank { "HOUSE DR · INTERIOR / EXTERIOR" },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = palette.headerMuted,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Create room-by-room estimates, client-ready proposals, and material takeoffs powered by your Price Book.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = palette.headerText.copy(alpha = 0.92f)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = state.settings.companyName.ifBlank { "EZ ESTIMATOR" },
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = palette.textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = state.settings.companyTagline.ifBlank { "HOUSE DR · INTERIOR / EXTERIOR" },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = palette.brandHighlight,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Create room-by-room estimates, client-ready proposals, and material takeoffs powered by your Price Book.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = palette.textMuted
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Image(
+                                painter = painterResource(id = R.drawable.thdr_mascot_avatar),
+                                contentDescription = "House DR Estimator Mascot",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .height(138.dp)
+                                    .width(84.dp)
+                                    .testTag("home_mascot_avatar")
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Image(
-                            painter = painterResource(id = R.drawable.thdr_mascot_avatar),
-                            contentDescription = "House DR Estimator Mascot",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .height(136.dp)
-                                .width(82.dp)
-                                .testTag("home_mascot_avatar")
-                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -481,7 +508,7 @@ private fun StatTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceVariant)
+            .background(palette.surfaceHigh.copy(alpha = if (palette.isDark) 0.55f else 0.65f))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally

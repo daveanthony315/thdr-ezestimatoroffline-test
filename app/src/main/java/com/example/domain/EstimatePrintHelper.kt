@@ -266,7 +266,7 @@ object EstimatePrintHelper {
             """.trimIndent()
         } else ""
 
-        val topRightPattern = buildCornerPatternSvg("#0A56B8", topRight = true)
+        val topRightPattern = buildCornerPatternSvg("#5E8FB9", topRight = true)
         val bottomLeftPattern = buildCornerPatternSvg("#FFFFFF", topRight = false)
 
         return """
@@ -277,12 +277,12 @@ object EstimatePrintHelper {
           <style>
             @page { size: letter; margin: 0; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-            html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #16202F; background: #F1F3F6; }
+            html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1D2B3A; background: #E6E7EA; }
             .page-shell {
               position: relative;
               min-height: 10.9in;
               padding: 26px 28px 34px 28px;
-              background: linear-gradient(to bottom, #F1F3F6 0%, #F1F3F6 56%, #004299 56%, #004299 100%);
+              background: linear-gradient(to bottom, #E6E7EA 0%, #E6E7EA 56%, #2F5D8A 56%, #2F5D8A 100%);
               overflow: hidden;
             }
             .corner-tr { position: absolute; top: 10px; right: 10px; z-index: 1; }
@@ -300,26 +300,27 @@ object EstimatePrintHelper {
               display: inline-flex;
               align-items: center;
               gap: 10px;
-              background: #101827;
-              border: 1.5px solid #0A56B8;
-              border-radius: 6px;
+              background: #22466A;
+              border: 2px solid #F5832B;
+              border-radius: 8px;
               padding: 7px 12px;
               margin-bottom: 12px;
             }
             .title-stack { line-height: 1.02; }
-            .title-company { font-size: 25px; font-weight: 900; color: #0B121E; letter-spacing: 0.4px; }
-            .title-doc { font-size: 25px; font-weight: 400; color: #0A56B8; letter-spacing: 0.8px; margin-top: 2px; }
+            .title-company { font-size: 25px; font-weight: 900; color: #1D2B3A; letter-spacing: 0.4px; }
+            .title-doc { font-size: 25px; font-weight: 500; color: #2F5D8A; letter-spacing: 0.8px; margin-top: 2px; }
             .meta-col { min-width: 170px; padding-top: 8px; }
-            .meta-rule { width: 92px; height: 2px; background: #6A93C9; margin-bottom: 16px; }
-            .meta-label { font-size: 11px; font-weight: 700; color: #1E293B; margin-top: 8px; }
-            .meta-val { font-size: 11.5px; color: #334155; margin-top: 2px; }
+            .meta-rule { width: 92px; height: 3px; background: #F5832B; margin-bottom: 14px; border-radius: 2px; }
+            .meta-label { font-size: 11px; font-weight: 700; color: #1D2B3A; margin-top: 8px; }
+            .meta-val { font-size: 11.5px; color: #4A4A4A; margin-top: 2px; }
             .section-pill {
-              background: #004299;
+              background: #2F5D8A;
               color: #FFFFFF;
               font-size: 13px;
               font-weight: 700;
               padding: 7px 16px;
               border-radius: 99px;
+              border-left: 5px solid #F5832B;
               margin-bottom: 12px;
               letter-spacing: 0.2px;
             }
@@ -330,40 +331,40 @@ object EstimatePrintHelper {
               margin-bottom: 16px;
             }
             .kv-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background: #FFFFFF; }
-            .kv-table td { border: 1px solid #3B4758; padding: 5px 8px; vertical-align: middle; }
-            .kv-label { width: 84px; background: #C8DAF5; font-weight: 700; color: #111827; }
-            .kv-val { color: #1E293B; background: #FFFFFF; }
+            .kv-table td { border: 1px solid #5E8FB9; padding: 5px 8px; vertical-align: middle; }
+            .kv-label { width: 84px; background: #CDE3F5; font-weight: 700; color: #1D2B3A; }
+            .kv-val { color: #4A4A4A; background: #FFFFFF; }
             .main-card {
               background: #FFFFFF;
-              border: 1.5px solid #B6C1D0;
+              border: 1.5px solid #5E8FB9;
               border-radius: 14px;
               padding: 18px 20px;
-              box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+              box-shadow: 0 3px 10px rgba(47, 93, 138, 0.12);
             }
             .grid-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
             .grid-table th {
-              background: #C8DAF5;
-              color: #111827;
+              background: #CDE3F5;
+              color: #1D2B3A;
               font-weight: 700;
               text-align: left;
-              border: 1px solid #3B4758;
+              border: 1px solid #5E8FB9;
               padding: 6px 9px;
             }
             .grid-table td {
-              border: 1px solid #3B4758;
+              border: 1px solid #5E8FB9;
               padding: 6px 9px;
               vertical-align: top;
-              color: #1E293B;
+              color: #4A4A4A;
             }
             .grid-table tr { break-inside: avoid; }
             .box-section { break-inside: avoid; }
-            .proj-title { font-weight: 700; color: #0F172A; margin-bottom: 4px; font-size: 12px; }
-            .proj-sub { color: #475569; font-size: 11px; }
+            .proj-title { font-weight: 700; color: #1D2B3A; margin-bottom: 4px; font-size: 12px; }
+            .proj-sub { color: #4A4A4A; font-size: 11px; }
             .proj-rooms { display: flex; flex-direction: column; gap: 3px; }
-            .proj-room-line { font-size: 11px; color: #334155; line-height: 1.35; }
-            .item-pb { color: #475569; font-size: 10.5px; }
-            .item-note { color: #52657B; font-size: 10.5px; margin-top: 2px; }
-            .muted-cell { color: #64748B; padding: 12px; }
+            .proj-room-line { font-size: 11px; color: #4A4A4A; line-height: 1.35; }
+            .item-pb { color: #5E8FB9; font-size: 10.5px; }
+            .item-note { color: #4A4A4A; font-size: 10.5px; margin-top: 2px; }
+            .muted-cell { color: #4A4A4A; padding: 12px; }
             .center { text-align: center; }
             .right { text-align: right; }
             .bottom-split {
@@ -374,15 +375,15 @@ object EstimatePrintHelper {
               margin-top: 14px;
               break-inside: avoid;
             }
-            .notes-col { flex: 1.15; font-size: 11px; color: #334155; line-height: 1.45; }
-            .notes-col strong { font-size: 12px; color: #0F172A; }
+            .notes-col { flex: 1.15; font-size: 11px; color: #4A4A4A; line-height: 1.45; }
+            .notes-col strong { font-size: 12px; color: #1D2B3A; }
             .notes-col p { margin: 5px 0; }
             .totals-col { flex: 0.85; min-width: 220px; }
             .totals-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-            .totals-table td { border: 1px solid #3B4758; padding: 6px 9px; }
-            .totals-label { background: #C8DAF5; font-weight: 700; color: #111827; width: 52%; }
-            .totals-val { text-align: right; color: #0F172A; font-weight: 600; background: #FFFFFF; }
-            .totals-grand td { font-weight: 800; font-size: 12.5px; }
+            .totals-table td { border: 1px solid #5E8FB9; padding: 6px 9px; }
+            .totals-label { background: #CDE3F5; font-weight: 700; color: #1D2B3A; width: 52%; }
+            .totals-val { text-align: right; color: #1D2B3A; font-weight: 600; background: #FFFFFF; }
+            .totals-grand td { font-weight: 800; font-size: 12.5px; border-top: 2px solid #F5832B; }
             .contact-sign-row {
               display: flex;
               justify-content: space-between;
@@ -390,18 +391,18 @@ object EstimatePrintHelper {
               gap: 18px;
               margin-top: 22px;
               padding-top: 10px;
-              border-top: 1px solid #E2E8F0;
+              border-top: 1px solid #CDE3F5;
               break-inside: avoid;
             }
             .contact-col { flex: 1; }
-            .contact-heading { font-size: 13px; font-weight: 800; color: #0F172A; margin-bottom: 8px; }
-            .contact-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #1E293B; margin-bottom: 5px; }
+            .contact-heading { font-size: 13px; font-weight: 800; color: #2F5D8A; margin-bottom: 8px; }
+            .contact-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #4A4A4A; margin-bottom: 5px; }
             .signatures { display: flex; gap: 26px; flex: 1; justify-content: flex-end; }
             .sig-col { width: 145px; text-align: center; }
-            .sig-role { font-size: 12px; font-weight: 800; color: #0F172A; margin-bottom: 24px; }
-            .sig-line { border-bottom: 1.5px solid #475569; margin-bottom: 5px; }
-            .sig-name { font-size: 11px; font-weight: 700; color: #0F172A; }
-            .sig-org { font-size: 10px; color: #475569; }
+            .sig-role { font-size: 12px; font-weight: 800; color: #2F5D8A; margin-bottom: 24px; }
+            .sig-line { border-bottom: 1.5px solid #5E8FB9; margin-bottom: 5px; }
+            .sig-name { font-size: 11px; font-weight: 700; color: #1D2B3A; }
+            .sig-org { font-size: 10px; color: #4A4A4A; }
           </style>
         </head>
         <body>
@@ -535,20 +536,20 @@ object EstimatePrintHelper {
                   <div class="contact-col">
                     <div class="contact-heading">Contact Us</div>
                     <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#0A56B8" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
                       <span>${esc(emailLine)}</span>
                     </div>
                     <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#0A56B8" xmlns="http://www.w3.org/2000/svg"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.46.57 3.58.11.35.03.74-.25 1.01l-2.2 2.2z"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.46.57 3.58.11.35.03.74-.25 1.01l-2.2 2.2z"/></svg>
                       <span>${esc(phoneLine)}</span>
                     </div>
                     <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#0A56B8" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
                       <span>${esc(addressLine)}</span>
                     </div>
                     ${
                       if (licenseLine.isNotBlank()) {
-                          "<div class='contact-item'><svg width='13' height='13' viewBox='0 0 24 24' fill='#0A56B8' xmlns='http://www.w3.org/2000/svg'><path d='M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z'/></svg><span>Lic: ${esc(licenseLine)}</span></div>"
+                          "<div class='contact-item'><svg width='13' height='13' viewBox='0 0 24 24' fill='#2F5D8A' xmlns='http://www.w3.org/2000/svg'><path d='M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z'/></svg><span>Lic: ${esc(licenseLine)}</span></div>"
                       } else ""
                     }
                   </div>

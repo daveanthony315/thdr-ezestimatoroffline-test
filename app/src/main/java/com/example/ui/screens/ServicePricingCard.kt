@@ -46,16 +46,9 @@ import com.example.ui.components.ThdrDoubleField
 import com.example.ui.components.ThdrDropdownField
 import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrTextField
-import com.example.ui.theme.AccentOrange
-import com.example.ui.theme.BlueprintSurfaceHigh
-import com.example.ui.theme.BlueprintSurfaceVariant
-import com.example.ui.theme.BrandCobalt
-import com.example.ui.theme.BrandCyan
+import androidx.compose.ui.graphics.Color
 import com.example.ui.theme.JetBrainsMono
-import com.example.ui.theme.OutlineBlue
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.WarningAmber
+import com.example.ui.theme.LocalThdrPalette
 import kotlin.math.abs
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -77,6 +70,7 @@ fun ServicePricingCard(
     onToggleSub: (String) -> Unit,
     onSetQuestionAnswer: (String, String, Boolean) -> Unit
 ) {
+    val palette = LocalThdrPalette.current
     val items = remember(service, priceBook) { EstimatorEngine.pbItemsForService(service, priceBook) }
     val sel = room.serviceSelections[service] ?: RoomServiceSelection(serviceName = service)
     var showScopeQuestions by remember { mutableStateOf(false) }
@@ -85,8 +79,8 @@ fun ServicePricingCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(BlueprintSurfaceHigh.copy(alpha = 0.85f))
-            .border(1.dp, OutlineBlue, RoundedCornerShape(12.dp))
+            .background(palette.surfaceHigh.copy(alpha = if (palette.isDark) 0.85f else 0.55f))
+            .border(1.dp, palette.outline, RoundedCornerShape(12.dp))
             .padding(12.dp)
             .testTag("service_box_${roomIndex}_$serviceIndex")
     ) {
@@ -94,13 +88,13 @@ fun ServicePricingCard(
             Text(
                 text = service,
                 style = MaterialTheme.typography.titleSmall,
-                color = BrandCyan
+                color = palette.brandHighlight
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "No matching Price Book line items are currently saved for this service. Add or assign a line item in the Price Book.",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
+                color = palette.textMuted
             )
             Spacer(modifier = Modifier.height(8.dp))
             ThdrTextField(
@@ -137,7 +131,7 @@ fun ServicePricingCard(
         Text(
             text = "$service — Price Book & Unit Pricing",
             style = MaterialTheme.typography.titleSmall,
-            color = BrandCyan
+            color = palette.brandHighlight
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -153,7 +147,7 @@ fun ServicePricingCard(
         Text(
             text = "Pricing mode & unit",
             style = MaterialTheme.typography.labelMedium,
-            color = TextMuted
+            color = palette.textMuted
         )
         Spacer(modifier = Modifier.height(6.dp))
         FlowRow(
@@ -229,7 +223,7 @@ fun ServicePricingCard(
             Text(
                 text = "Individual unit price selection ($effectiveUnit)",
                 style = MaterialTheme.typography.labelMedium,
-                color = TextMuted
+                color = palette.textMuted
             )
             Spacer(modifier = Modifier.height(6.dp))
             FlowRow(
@@ -279,13 +273,13 @@ fun ServicePricingCard(
             Text(
                 text = "${basis.label} · $effectiveUnit",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted,
+                color = palette.textMuted,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = "Line total: ${EstimatorEngine.formatMoney(lineTotal)}",
                 style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                color = BrandCyan
+                color = palette.brandHighlight
             )
         }
 
@@ -303,7 +297,7 @@ fun ServicePricingCard(
             Text(
                 text = "No price is configured for this unit. Pick a preset or enter a custom unit price above.",
                 style = MaterialTheme.typography.bodySmall,
-                color = WarningAmber
+                color = palette.warning
             )
         }
 
@@ -323,12 +317,12 @@ fun ServicePricingCard(
                 Text(
                     text = "Scope options & takeoff details",
                     style = MaterialTheme.typography.labelMedium,
-                    color = AccentOrange
+                    color = palette.accent
                 )
                 Icon(
                     imageVector = if (showScopeQuestions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = "Toggle scope options",
-                    tint = AccentOrange
+                    tint = palette.accent
                 )
             }
 
@@ -337,7 +331,7 @@ fun ServicePricingCard(
                 Text(
                     text = "Subcategories",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
+                    color = palette.textMuted
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 FlowRow(
@@ -360,7 +354,7 @@ fun ServicePricingCard(
                         Text(
                             text = q.label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted
+                            color = palette.textMuted
                         )
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -373,7 +367,7 @@ fun ServicePricingCard(
                                     modifier = Modifier
                                         .defaultMinSize(minHeight = 48.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(BlueprintSurfaceVariant)
+                                        .background(palette.surfaceVariant)
                                         .clickable { onSetQuestionAnswer(qKey, opt, true) }
                                         .padding(end = 8.dp)
                                 ) {
@@ -381,11 +375,11 @@ fun ServicePricingCard(
                                         checked = checked,
                                         onCheckedChange = { onSetQuestionAnswer(qKey, opt, true) },
                                         colors = CheckboxDefaults.colors(
-                                            checkedColor = BrandCobalt,
-                                            checkmarkColor = TextPrimary
+                                            checkedColor = palette.primary,
+                                            checkmarkColor = Color.White
                                         )
                                     )
-                                    Text(opt, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
+                                    Text(opt, style = MaterialTheme.typography.bodySmall, color = palette.textPrimary)
                                 }
                             }
                         }

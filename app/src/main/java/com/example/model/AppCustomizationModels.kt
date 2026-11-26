@@ -39,34 +39,34 @@ enum class AppThemePreset(
     val description: String,
     val isDark: Boolean
 ) {
+    HOUSE_DR_STUDIO(
+        key = "house_dr_studio",
+        label = "House DR Studio",
+        description = "Slate Blue, Sky Blue, Soft Gray, Clean White & Accent Orange",
+        isDark = false
+    ),
     BLUEPRINT_NAVY(
         key = "blueprint_navy",
-        label = "Blueprint Navy",
-        description = "Signature THDR architectural dark blue",
+        label = "Blueprint Slate Night",
+        description = "Deep Slate Blue architectural dark mode",
         isDark = true
     ),
     MIDNIGHT_SLATE(
         key = "midnight_slate",
-        label = "Midnight Slate",
-        description = "Neutral dark graphite for low glare",
+        label = "Midnight Charcoal",
+        description = "Neutral dark charcoal for low glare",
         isDark = true
-    ),
-    STEEL_DAYLIGHT(
-        key = "steel_daylight",
-        label = "Steel Daylight",
-        description = "High-contrast light mode for outdoor sunlight",
-        isDark = false
     ),
     WORKSHOP_PINE(
         key = "workshop_pine",
-        label = "Workshop Pine",
-        description = "Deep forest slate with crisp contrast",
+        label = "Sage & Timber",
+        description = "Deep slate forest with Sage Green and Wood Brown accents",
         isDark = true
     );
 
     companion object {
         fun fromKey(key: String?): AppThemePreset =
-            entries.firstOrNull { it.key == key } ?: BLUEPRINT_NAVY
+            entries.firstOrNull { it.key == key } ?: HOUSE_DR_STUDIO
     }
 }
 
@@ -76,10 +76,10 @@ enum class AppAccentColor(
     val primaryArgb: Long,
     val secondaryArgb: Long
 ) {
-    COPPER_ORANGE("orange", "Copper Orange", 0xFFE26C1A, 0xFFEA9636),
-    ELECTRIC_CYAN("cyan", "Electric Cyan", 0xFF0A68D3, 0xFF49B2F3),
-    EMERALD_TEAL("teal", "Emerald Teal", 0xFF0E8E88, 0xFF31D5C8),
-    GOLD_AMBER("amber", "Amber Gold", 0xFFD98218, 0xFFFFB74D);
+    COPPER_ORANGE("orange", "Accent Orange", 0xFFF5832B, 0xFFE8A460),
+    ELECTRIC_CYAN("cyan", "Steel Blue", 0xFF2F5D8A, 0xFF5E8FB9),
+    EMERALD_TEAL("teal", "Sage Green", 0xFF6B8A54, 0xFF8FAA77),
+    GOLD_AMBER("amber", "Wood & Amber", 0xFFA67C52, 0xFFFFD88A);
 
     companion object {
         fun fromKey(key: String?): AppAccentColor =
@@ -94,7 +94,7 @@ data class AppSettings(
     val companyEmail: String = "",
     val companyAddress: String = "",
     val companyLicense: String = "",
-    val themePreset: AppThemePreset = AppThemePreset.BLUEPRINT_NAVY,
+    val themePreset: AppThemePreset = AppThemePreset.HOUSE_DR_STUDIO,
     val accentColor: AppAccentColor = AppAccentColor.COPPER_ORANGE,
     val showBlueprintBackdrop: Boolean = true,
     val largeFieldText: Boolean = false,

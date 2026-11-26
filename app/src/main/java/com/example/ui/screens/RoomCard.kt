@@ -375,7 +375,7 @@ private fun ExteriorServicePicker(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceHigh.copy(alpha = 0.7f))
+            .background(palette.surfaceHigh.copy(alpha = 0.72f))
             .border(1.dp, palette.outline, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {

@@ -231,7 +231,7 @@ fun SavedDocumentsScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Surface(
                                         shape = RoundedCornerShape(99.dp),
-                                        color = palette.surfaceHigh,
+                                        color = palette.surfaceHigh.copy(alpha = 0.76f),
                                         border = BorderStroke(1.dp, palette.outline)
                                     ) {
                                         Text(

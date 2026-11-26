@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -53,8 +52,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.EstimatorEngine
+import com.example.model.BrandLogoChoice
 import com.example.model.DocumentType
-import com.example.model.SavedProposal
+import com.example.model.HeroBackdropChoice
+import com.example.model.HeroMascotPosition
+import com.example.model.MascotSlotChoice
+import com.example.ui.components.BrandingImage
 import com.example.ui.components.ThdrCard
 import com.example.ui.components.ThdrPrimaryButton
 import com.example.ui.components.ThdrSecondaryButton
@@ -75,9 +78,7 @@ fun HomeScreen(
     onOpenCustomers: () -> Unit,
     onOpenPriceBook: () -> Unit,
     onOpenMaterials: () -> Unit,
-    onResumeActiveDraft: () -> Unit,
-    onOpenSavedDocument: (SavedProposal) -> Unit,
-    onOpenPrivacyPolicy: () -> Unit = {}
+    onResumeActiveDraft: () -> Unit
 ) {
     val palette = LocalThdrPalette.current
     val currency = state.settings.currencySymbol
@@ -104,94 +105,147 @@ fun HomeScreen(
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
                 ThdrCard {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, palette.outline, RoundedCornerShape(14.dp))
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.bg_blueprint),
-                            contentDescription = "House DR Architectural Blueprint",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .matchParentSize()
-                        )
+                    if (state.settings.showHomeHeroBanner) {
+                        val settings = state.settings
+                        val showMascot = settings.homeMascotPosition != HeroMascotPosition.HIDDEN &&
+                            settings.mascotChoice != MascotSlotChoice.HIDDEN
+                        val mascotFallbackRes = when (settings.mascotChoice) {
+                            MascotSlotChoice.CIRCULAR_BADGE -> R.drawable.thdr_mascot_badge
+                            MascotSlotChoice.COMPANY_EMBLEM -> R.drawable.thdr_logo
+                            else -> R.drawable.thdr_mascot_avatar
+                        }
+                        val mascotCustomPath = if (settings.mascotChoice == MascotSlotChoice.CUSTOM) {
+                            settings.customMascotPath
+                        } else ""
+
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            palette.primaryDeep.copy(alpha = 0.94f),
-                                            palette.primary.copy(alpha = 0.84f),
-                                            palette.primaryDeep.copy(alpha = 0.72f)
-                                        )
-                                    )
-                                )
-                        )
-                        Row(
-                            modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .clip(RoundedCornerShape(14.dp))
+                                .border(1.dp, palette.outline, RoundedCornerShape(14.dp))
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(palette.primaryDeep.copy(alpha = 0.90f))
-                                        .border(1.dp, palette.headerMuted.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.thdr_brand_logo),
-                                        contentDescription = "The Home Improvement House DR Logo",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier
-                                            .height(48.dp)
-                                            .widthIn(max = 165.dp)
-                                            .testTag("home_brand_logo")
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = state.settings.companyName.ifBlank { "EZ ESTIMATOR" },
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = palette.headerText,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = state.settings.companyTagline.ifBlank { "HOUSE DR · INTERIOR / EXTERIOR" },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = palette.headerMuted,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Create room-by-room estimates, client-ready proposals, and material takeoffs powered by your Price Book.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = palette.headerText.copy(alpha = 0.92f)
+                            if (settings.heroBackdropChoice != HeroBackdropChoice.GRADIENT_ONLY) {
+                                val heroCustomPath = if (settings.heroBackdropChoice == HeroBackdropChoice.CUSTOM) {
+                                    settings.customBackdropPath
+                                } else ""
+                                BrandingImage(
+                                    customPath = heroCustomPath,
+                                    fallbackResId = R.drawable.bg_blueprint,
+                                    contentDescription = "House DR Architectural Blueprint",
+                                    contentScale = ContentScale.Crop,
+                                    maxDecodePx = 1024,
+                                    modifier = Modifier.matchParentSize()
                                 )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Image(
-                                painter = painterResource(id = R.drawable.thdr_mascot_avatar),
-                                contentDescription = "House DR Estimator Mascot",
-                                contentScale = ContentScale.Fit,
+                            Box(
                                 modifier = Modifier
-                                    .height(138.dp)
-                                    .width(84.dp)
-                                    .testTag("home_mascot_avatar")
+                                    .matchParentSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                palette.primaryDeep.copy(alpha = 0.94f),
+                                                palette.primary.copy(alpha = 0.84f),
+                                                palette.primaryDeep.copy(alpha = 0.72f)
+                                            )
+                                        )
+                                    )
                             )
-                        }
-                    }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                if (showMascot && settings.homeMascotPosition == HeroMascotPosition.LEFT) {
+                                    BrandingImage(
+                                        customPath = mascotCustomPath,
+                                        fallbackResId = mascotFallbackRes,
+                                        contentDescription = "House DR Estimator Mascot",
+                                        contentScale = ContentScale.Fit,
+                                        maxDecodePx = 512,
+                                        modifier = Modifier
+                                            .height(138.dp)
+                                            .width(84.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .testTag("home_mascot_avatar")
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (settings.brandLogoChoice != BrandLogoChoice.HIDDEN) {
+                                        val logoFallbackRes = when (settings.brandLogoChoice) {
+                                            BrandLogoChoice.DEFAULT_EMBLEM -> R.drawable.thdr_logo
+                                            BrandLogoChoice.MASCOT_BADGE -> R.drawable.thdr_mascot_badge
+                                            else -> R.drawable.thdr_brand_logo
+                                        }
+                                        val logoCustomPath = if (settings.brandLogoChoice == BrandLogoChoice.CUSTOM) {
+                                            settings.customBrandLogoPath
+                                        } else ""
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(palette.primaryDeep.copy(alpha = 0.90f))
+                                                .border(1.dp, palette.headerMuted.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            BrandingImage(
+                                                customPath = logoCustomPath,
+                                                fallbackResId = logoFallbackRes,
+                                                contentDescription = "Company Brand Logo",
+                                                contentScale = ContentScale.Fit,
+                                                maxDecodePx = 512,
+                                                modifier = Modifier
+                                                    .height(48.dp)
+                                                    .widthIn(max = 165.dp)
+                                                    .testTag("home_brand_logo")
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+                                    Text(
+                                        text = settings.companyName.ifBlank { "EZ ESTIMATOR" },
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = palette.headerText,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = settings.companyTagline.ifBlank { "HOUSE DR · INTERIOR / EXTERIOR" },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = palette.headerMuted,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Create room-by-room estimates, client-ready proposals, and material takeoffs powered by your Price Book.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = palette.headerText.copy(alpha = 0.92f)
+                                    )
+                                }
+
+                                if (showMascot && settings.homeMascotPosition == HeroMascotPosition.RIGHT) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    BrandingImage(
+                                        customPath = mascotCustomPath,
+                                        fallbackResId = mascotFallbackRes,
+                                        contentDescription = "House DR Estimator Mascot",
+                                        contentScale = ContentScale.Fit,
+                                        maxDecodePx = 512,
+                                        modifier = Modifier
+                                            .height(138.dp)
+                                            .width(84.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .testTag("home_mascot_avatar")
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -394,107 +448,6 @@ fun HomeScreen(
                 }
             }
         }
-
-        // Recent Documents
-        item {
-            Box(modifier = Modifier.widthIn(max = 980.dp)) {
-                ThdrCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Recent Estimates & Proposals",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = palette.textPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    if (state.savedProposals.isEmpty()) {
-                        ThdrSubCard {
-                            Text(
-                                text = "No saved estimates or proposals yet. Tap Create above to start your first project.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = palette.textMuted
-                            )
-                        }
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.savedProposals.take(4).forEach { doc ->
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = palette.surfaceVariant,
-                                    border = BorderStroke(1.dp, palette.outlineSubtle),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .defaultMinSize(minHeight = 56.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable { onOpenSavedDocument(doc) }
-                                        .testTag("home_recent_doc_${doc.id}")
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            val title = doc.project.ifBlank { doc.customer }.ifBlank { doc.docType.title }
-                                            Text(
-                                                text = title,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                color = palette.textPrimary,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            val subtitle = buildString {
-                                                append(doc.docType.title)
-                                                if (doc.docType == DocumentType.PROPOSAL) {
-                                                    append(" · ${doc.status.label}")
-                                                }
-                                                if (doc.customer.isNotBlank()) {
-                                                    append(" · ${doc.customer}")
-                                                }
-                                                if (doc.date.isNotBlank()) {
-                                                    append(" · ${doc.date}")
-                                                }
-                                            }
-                                            Text(
-                                                text = subtitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = palette.textMuted,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = EstimatorEngine.formatMoney(doc.total, currency),
-                                            style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMono),
-                                            color = palette.brandHighlight
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Privacy Policy link footer
-        item {
-            Box(modifier = Modifier.widthIn(max = 980.dp)) {
-                DashboardActionTile(
-                    title = "Privacy Policy & Data Controls",
-                    subtitle = "On-device storage, backup rules & deletion info",
-                    icon = Icons.Default.Lock,
-                    onClick = onOpenPrivacyPolicy,
-                    testTag = "home_privacy_policy_btn",
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
     }
 }
 
@@ -508,7 +461,7 @@ private fun StatTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceHigh.copy(alpha = if (palette.isDark) 0.55f else 0.65f))
+            .background(palette.surfaceHigh.copy(alpha = 0.72f))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -556,9 +509,13 @@ private fun DocumentWorkflowCard(
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
-                            if (useAccentGradient) listOf(palette.accent, palette.accentSecondary)
-                            else listOf(palette.primary, palette.primaryDeep)
+                            listOf(palette.primary.copy(alpha = 0.92f), palette.primaryDeep.copy(alpha = 0.96f))
                         )
+                    )
+                    .border(
+                        width = if (useAccentGradient) 1.5.dp else 1.dp,
+                        color = if (useAccentGradient) palette.accent.copy(alpha = 0.85f) else palette.outline.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(12.dp)
                     )
             ) {
                 Icon(
@@ -620,7 +577,7 @@ private fun DashboardActionTile(
     val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = palette.surfaceVariant,
+        color = palette.surfaceVariant.copy(alpha = 0.82f),
         border = BorderStroke(1.dp, palette.outline),
         modifier = modifier
             .defaultMinSize(minHeight = 72.dp)
@@ -638,7 +595,7 @@ private fun DashboardActionTile(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(palette.surfaceHigh)
+                    .background(palette.surfaceHigh.copy(alpha = 0.76f))
             ) {
                 Icon(
                     imageVector = icon,

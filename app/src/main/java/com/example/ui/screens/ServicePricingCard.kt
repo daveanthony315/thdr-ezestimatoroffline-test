@@ -79,7 +79,7 @@ fun ServicePricingCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceHigh.copy(alpha = if (palette.isDark) 0.85f else 0.55f))
+            .background(palette.surfaceHigh.copy(alpha = 0.72f))
             .border(1.dp, palette.outline, RoundedCornerShape(12.dp))
             .padding(12.dp)
             .testTag("service_box_${roomIndex}_$serviceIndex")
@@ -317,12 +317,12 @@ fun ServicePricingCard(
                 Text(
                     text = "Scope options & takeoff details",
                     style = MaterialTheme.typography.labelMedium,
-                    color = palette.accent
+                    color = palette.brandHighlight
                 )
                 Icon(
                     imageVector = if (showScopeQuestions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = "Toggle scope options",
-                    tint = palette.accent
+                    tint = palette.brandHighlight
                 )
             }
 
@@ -367,7 +367,7 @@ fun ServicePricingCard(
                                     modifier = Modifier
                                         .defaultMinSize(minHeight = 48.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(palette.surfaceVariant)
+                                        .background(palette.surfaceVariant.copy(alpha = 0.82f))
                                         .clickable { onSetQuestionAnswer(qKey, opt, true) }
                                         .padding(end = 8.dp)
                                 ) {

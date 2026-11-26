@@ -7,10 +7,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.EstimatorRepository
 import com.example.data.db.EstimatorDatabase
+import com.example.domain.BrandingImageStore
 import com.example.domain.EstimatePrintHelper
 import com.example.domain.EstimatorEngine
 import com.example.domain.PriceBookJsonCodec
+import com.example.domain.SettingsBackupManager
 import com.example.model.AppSettings
+import com.example.model.BrandingSlot
 import com.example.model.CalcResultRow
 import com.example.model.CategoryMeta
 import com.example.model.Customer
@@ -522,10 +525,120 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun resetSettingsToDefaults() {
+    fun saveSettings(next: AppSettings) {
+        val prev = uiState.value.settings
         viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                cleanupReplacedPath(prev.customHeaderEmblemPath, next.customHeaderEmblemPath)
+                cleanupReplacedPath(prev.customBrandLogoPath, next.customBrandLogoPath)
+                cleanupReplacedPath(prev.customBackdropPath, next.customBackdropPath)
+                cleanupReplacedPath(prev.customMascotPath, next.customMascotPath)
+                cleanupReplacedPath(prev.customPdfLogoPath, next.customPdfLogoPath)
+            }
+            repository.saveAppSettings(next)
+            _snackbarMessage.value = "Settings & customizations saved"
+        }
+    }
+
+    fun importBrandingImage(slot: BrandingSlot, uri: Uri, onComplete: (String?) -> Unit) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val savedPath = withContext(Dispatchers.IO) {
+                BrandingImageStore.importFromUri(app, slot, uri)
+            }
+            if (savedPath == null) {
+                _snackbarMessage.value = "Could not load selected image"
+            }
+            onComplete(savedPath)
+        }
+    }
+
+    fun deleteBrandingImage(path: String) {
+        if (path.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            BrandingImageStore.deleteFileIfExists(path)
+        }
+    }
+
+    fun resetSettingsToDefaults() {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                BrandingImageStore.clearAllCustomImages(app)
+            }
             repository.saveAppSettings(AppSettings())
-            _snackbarMessage.value = "Settings restored to defaults"
+            _snackbarMessage.value = "Settings & customizations restored to defaults"
+        }
+    }
+
+    fun exportSettingsBundleToUri(
+        uri: Uri,
+        settingsSnapshot: AppSettings,
+        onResult: (String) -> Unit = {}
+    ) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            try {
+                val stats = withContext(Dispatchers.IO) {
+                    app.contentResolver.openOutputStream(uri)?.use { stream ->
+                        SettingsBackupManager.writeBackupZip(settingsSnapshot, stream)
+                    } ?: throw IllegalStateException("Could not open export file.")
+                }
+                val msg = if (stats.exportedImageCount > 0) {
+                    "Exported settings & ${stats.exportedImageCount} custom image(s)"
+                } else {
+                    "Exported settings configuration"
+                }
+                _snackbarMessage.value = msg
+                onResult(msg)
+            } catch (e: Exception) {
+                val msg = "Export failed: ${e.message ?: "unable to write file"}"
+                _snackbarMessage.value = msg
+                onResult(msg)
+            }
+        }
+    }
+
+    fun importSettingsBundleFromUri(
+        uri: Uri,
+        onRestored: (AppSettings, Int) -> Unit = { _, _ -> },
+        onError: (String) -> Unit = {}
+    ) {
+        val app = getApplication<Application>()
+        val prev = uiState.value.settings
+        viewModelScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val result = app.contentResolver.openInputStream(uri)?.use { stream ->
+                        SettingsBackupManager.restoreFromStream(app, stream)
+                    } ?: throw IllegalStateException("Could not read selected file.")
+
+                    cleanupReplacedPath(prev.customHeaderEmblemPath, result.settings.customHeaderEmblemPath)
+                    cleanupReplacedPath(prev.customBrandLogoPath, result.settings.customBrandLogoPath)
+                    cleanupReplacedPath(prev.customBackdropPath, result.settings.customBackdropPath)
+                    cleanupReplacedPath(prev.customMascotPath, result.settings.customMascotPath)
+                    cleanupReplacedPath(prev.customPdfLogoPath, result.settings.customPdfLogoPath)
+                    result
+                }
+                repository.saveAppSettings(result.settings)
+                val msg = if (result.restoredImageCount > 0) {
+                    "Restored settings & ${result.restoredImageCount} custom image(s)"
+                } else {
+                    "Restored settings configuration"
+                }
+                _snackbarMessage.value = msg
+                onRestored(result.settings, result.restoredImageCount)
+            } catch (e: Exception) {
+                val msg = "Restore failed: ${e.message ?: "invalid backup file"}"
+                _snackbarMessage.value = msg
+                onError(msg)
+            }
+        }
+    }
+
+    private fun cleanupReplacedPath(oldPath: String, newPath: String) {
+        if (oldPath.isNotBlank() && oldPath != newPath) {
+            BrandingImageStore.deleteFileIfExists(oldPath)
         }
     }
 

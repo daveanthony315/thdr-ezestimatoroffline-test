@@ -1,23 +1,48 @@
 package com.example.domain
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.print.PrintAttributes
 import android.print.PrintManager
-import android.util.Base64
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import com.example.R
 import com.example.model.AppSettings
 import com.example.model.Customer
 import com.example.model.DocumentType
 import com.example.model.EstimateDraft
+import com.example.model.PdfColorTheme
+import com.example.model.PdfLogoMode
 import com.example.model.PriceBookItem
 import com.example.model.TakeoffResult
 import java.util.Locale
 import kotlin.math.max
 
 object EstimatePrintHelper {
+
+    internal data class ResolvedPdfPalette(
+        val primaryHex: String,
+        val deepHex: String,
+        val steelHex: String,
+        val skyHex: String,
+        val softGrayHex: String,
+        val accentHex: String
+    )
+
+    internal fun resolvePdfPalette(settings: AppSettings): ResolvedPdfPalette {
+        val base = settings.pdfColorTheme
+        val accentHex = if (base == PdfColorTheme.MATCH_APP_ACCENT) {
+            String.format(Locale.US, "#%06X", (settings.accentColor.primaryArgb and 0xFFFFFFL))
+        } else {
+            base.accentHex
+        }
+        return ResolvedPdfPalette(
+            primaryHex = base.primaryHex,
+            deepHex = base.deepHex,
+            steelHex = base.steelHex,
+            skyHex = base.skyHex,
+            softGrayHex = base.softGrayHex,
+            accentHex = accentHex
+        )
+    }
 
     fun printEstimate(
         context: Context,
@@ -27,31 +52,31 @@ object EstimatePrintHelper {
         settings: AppSettings = AppSettings(),
         customer: Customer? = null
     ) {
-        val emblemBase64 = loadDrawableBase64(context, R.drawable.thdr_logo)
-        val fullLogoBase64 = loadDrawableBase64(context, R.drawable.thdr_brand_logo)
-        val html = buildEstimateHtml(
+        val hostContext = findActivity(context) ?: context
+        val printManager = hostContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
+        val docLabel = draft.docType.title
+        val titleSlug = (draft.project.ifBlank { draft.customer }.ifBlank { "THDR_$docLabel" })
+        val jobName = "${settings.companyName.ifBlank { "House DR" }} - $docLabel - $titleSlug"
+        val attributes = PrintAttributes.Builder()
+            .setMediaSize(PrintAttributes.MediaSize.NA_LETTER)
+            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+            .build()
+        val adapter = EstimatePdfPrintAdapter(
+            context = hostContext,
+            jobName = jobName,
             draft = draft,
             takeoff = takeoff,
             priceBook = priceBook,
             settings = settings,
-            customer = customer,
-            emblemBase64 = emblemBase64,
-            fullLogoBase64 = fullLogoBase64
+            customer = customer
         )
-        val webView = WebView(context)
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
+        printManager.print(jobName, adapter, attributes)
+    }
 
-            override fun onPageFinished(view: WebView?, url: String?) {
-                val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
-                val docLabel = draft.docType.title
-                val titleSlug = (draft.project.ifBlank { draft.customer }.ifBlank { "THDR_$docLabel" })
-                val jobName = "${settings.companyName.ifBlank { "House DR" }} - $docLabel - $titleSlug"
-                val adapter = webView.createPrintDocumentAdapter(jobName)
-                printManager.print(jobName, adapter, PrintAttributes.Builder().build())
-            }
-        }
-        webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+    private tailrec fun findActivity(context: Context): Activity? = when (context) {
+        is Activity -> context
+        is ContextWrapper -> findActivity(context.baseContext)
+        else -> null
     }
 
     private fun esc(text: String): String = text
@@ -60,19 +85,15 @@ object EstimatePrintHelper {
         .replace(">", "&gt;")
         .replace("\"", "&quot;")
 
-    private fun loadDrawableBase64(context: Context, resId: Int): String? = try {
-        context.resources.openRawResource(resId).use { stream ->
-            Base64.encodeToString(stream.readBytes(), Base64.NO_WRAP)
-        }
-    } catch (_: Exception) {
-        null
-    }
-
-    private fun buildDocumentNumber(draft: EstimateDraft): String {
+    internal fun buildDocumentNumber(
+        draft: EstimateDraft,
+        settings: AppSettings = AppSettings()
+    ): String {
+        val rootPrefix = settings.pdfDocNumberPrefix.trim().ifBlank { "THDR" }.uppercase(Locale.US)
         val prefix = if (draft.docType == DocumentType.PROPOSAL) "PROP" else "EST"
         val yearPart = draft.date.take(4).takeIf { it.all(Char::isDigit) && it.length == 4 } ?: "2026"
         val idPart = draft.id?.let { String.format(Locale.US, "%03d", it) } ?: "DRAFT"
-        return "THDR-$prefix-$yearPart-$idPart"
+        return "$rootPrefix-$prefix-$yearPart-$idPart"
     }
 
     private fun buildCornerPatternSvg(color: String, topRight: Boolean): String {
@@ -113,12 +134,18 @@ object EstimatePrintHelper {
         emblemBase64: String? = null,
         fullLogoBase64: String? = null
     ): String {
+        val pdfPalette = resolvePdfPalette(settings)
         val currency = settings.currencySymbol
         val isProposal = draft.docType == DocumentType.PROPOSAL
-        val docWord = if (isProposal) "PROPOSAL" else "ESTIMATE"
-        val docHeading = if (isProposal) "CLIENT PROPOSAL" else "PROJECT ESTIMATE"
-        val docNumber = buildDocumentNumber(draft)
-        val companyHeading = settings.companyName.ifBlank { "THE HOME IMPROVEMENT" }.uppercase(Locale.US)
+        val docWord = if (isProposal) {
+            settings.pdfProposalTitle.ifBlank { "PROPOSAL" }
+        } else {
+            settings.pdfEstimateTitle.ifBlank { "ESTIMATE" }
+        }
+        val docNumber = buildDocumentNumber(draft, settings)
+        val companyHeading = settings.pdfCompanyTitleOverride
+            .ifBlank { settings.companyName.ifBlank { "THE HOME IMPROVEMENT" } }
+            .uppercase(Locale.US)
 
         val customerName = draft.customer.ifBlank { customer?.name.orEmpty() }.ifBlank { "Valued Client" }
         val customerCompany = customer?.company.orEmpty().ifBlank { "Residential Property" }
@@ -190,7 +217,8 @@ object EstimatePrintHelper {
             }
         }
 
-        val materialsSectionHtml = if (takeoff.materials.isNotEmpty()) {
+        val materialsSectionHtml = if (settings.pdfShowMaterialsTable && takeoff.materials.isNotEmpty()) {
+            val matTitle = settings.pdfMaterialsSectionTitle.ifBlank { "Materials Takeoff Reference" }
             val matRows = takeoff.materials.entries.joinToString("\n") { (name, qty) ->
                 """
                 <tr>
@@ -203,7 +231,7 @@ object EstimatePrintHelper {
             <table class='grid-table box-section' style='margin-top:12px;'>
               <thead>
                 <tr>
-                  <th>Materials Takeoff Reference</th>
+                  <th>${esc(matTitle)}</th>
                   <th style='width:120px;text-align:right;'>Estimated Qty</th>
                 </tr>
               </thead>
@@ -222,7 +250,9 @@ object EstimatePrintHelper {
         val depositPct = draft.depositPercentText.toDoubleOrNull() ?: settings.defaultProposalDepositPct
         val depositAmt = takeoff.grandTotal * (depositPct.coerceIn(0.0, 100.0) / 100.0)
 
-        val notesHtml = if (isProposal) {
+        val notesHtml = if (!settings.pdfShowNotesSection) {
+            ""
+        } else if (isProposal) {
             val terms = draft.termsText.ifBlank { settings.defaultProposalTerms }
             buildString {
                 append("<strong>Notes &amp; Proposal Terms</strong>")
@@ -233,6 +263,11 @@ object EstimatePrintHelper {
                         " · <strong>Deposit (${EstimatorEngine.formatQty(depositPct)}%):</strong> ${EstimatorEngine.formatMoney(depositAmt, currency)}</p>"
                 )
             }
+        } else if (settings.pdfCustomEstimateNotes.isNotBlank()) {
+            """
+            <strong>Notes</strong>
+            <p>${esc(settings.pdfCustomEstimateNotes)}</p>
+            """.trimIndent()
         } else {
             """
             <strong>Notes</strong>
@@ -246,18 +281,24 @@ object EstimatePrintHelper {
         val addressLine = settings.companyAddress.ifBlank { settings.companyTagline.ifBlank { "Interior & Exterior Remodeling" } }
         val licenseLine = settings.companyLicense
 
-        val showSignatures = !isProposal || settings.includeSignatureBlockOnProposal
+        val showSignatures = if (isProposal) {
+            settings.includeSignatureBlockOnProposal
+        } else {
+            settings.includeSignatureBlockOnEstimate
+        }
+        val contractorRole = settings.pdfContractorSignatureLabel.ifBlank { "Contractor" }
+        val clientRole = settings.pdfClientSignatureLabel.ifBlank { "Client" }
         val signatureHtml = if (showSignatures) {
             """
             <div class='signatures'>
               <div class='sig-col'>
-                <div class='sig-role'>Contractor</div>
+                <div class='sig-role'>${esc(contractorRole)}</div>
                 <div class='sig-line'></div>
                 <div class='sig-name'>${esc(settings.companyName.ifBlank { "House DR" })}</div>
                 <div class='sig-org'>${esc(settings.companyTagline.ifBlank { "Authorized Representative" })}</div>
               </div>
               <div class='sig-col'>
-                <div class='sig-role'>Client</div>
+                <div class='sig-role'>${esc(clientRole)}</div>
                 <div class='sig-line'></div>
                 <div class='sig-name'>${esc(customerName)}</div>
                 <div class='sig-org'>${esc(customerCompany)}</div>
@@ -266,191 +307,34 @@ object EstimatePrintHelper {
             """.trimIndent()
         } else ""
 
-        val topRightPattern = buildCornerPatternSvg("#5E8FB9", topRight = true)
-        val bottomLeftPattern = buildCornerPatternSvg("#FFFFFF", topRight = false)
-
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            @page { size: letter; margin: 0; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-            html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1D2B3A; background: #E6E7EA; }
-            .page-shell {
-              position: relative;
-              min-height: 10.9in;
-              padding: 26px 28px 34px 28px;
-              background: linear-gradient(to bottom, #E6E7EA 0%, #E6E7EA 56%, #2F5D8A 56%, #2F5D8A 100%);
-              overflow: hidden;
-            }
-            .corner-tr { position: absolute; top: 10px; right: 10px; z-index: 1; }
-            .corner-bl { position: absolute; bottom: 10px; left: 10px; z-index: 1; }
-            .content-layer { position: relative; z-index: 2; }
-            .top-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              gap: 16px;
-              padding-right: 118px;
-              margin-bottom: 14px;
-            }
-            .brand-badge {
-              display: inline-flex;
-              align-items: center;
-              gap: 10px;
-              background: #22466A;
-              border: 2px solid #F5832B;
-              border-radius: 8px;
-              padding: 7px 12px;
-              margin-bottom: 12px;
-            }
-            .title-stack { line-height: 1.02; }
-            .title-company { font-size: 25px; font-weight: 900; color: #1D2B3A; letter-spacing: 0.4px; }
-            .title-doc { font-size: 25px; font-weight: 500; color: #2F5D8A; letter-spacing: 0.8px; margin-top: 2px; }
-            .meta-col { min-width: 170px; padding-top: 8px; }
-            .meta-rule { width: 92px; height: 3px; background: #F5832B; margin-bottom: 14px; border-radius: 2px; }
-            .meta-label { font-size: 11px; font-weight: 700; color: #1D2B3A; margin-top: 8px; }
-            .meta-val { font-size: 11.5px; color: #4A4A4A; margin-top: 2px; }
-            .section-pill {
-              background: #2F5D8A;
-              color: #FFFFFF;
-              font-size: 13px;
-              font-weight: 700;
-              padding: 7px 16px;
-              border-radius: 99px;
-              border-left: 5px solid #F5832B;
-              margin-bottom: 12px;
-              letter-spacing: 0.2px;
-            }
-            .cust-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-              margin-bottom: 16px;
-            }
-            .kv-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background: #FFFFFF; }
-            .kv-table td { border: 1px solid #5E8FB9; padding: 5px 8px; vertical-align: middle; }
-            .kv-label { width: 84px; background: #CDE3F5; font-weight: 700; color: #1D2B3A; }
-            .kv-val { color: #4A4A4A; background: #FFFFFF; }
-            .main-card {
-              background: #FFFFFF;
-              border: 1.5px solid #5E8FB9;
-              border-radius: 14px;
-              padding: 18px 20px;
-              box-shadow: 0 3px 10px rgba(47, 93, 138, 0.12);
-            }
-            .grid-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-            .grid-table th {
-              background: #CDE3F5;
-              color: #1D2B3A;
-              font-weight: 700;
-              text-align: left;
-              border: 1px solid #5E8FB9;
-              padding: 6px 9px;
-            }
-            .grid-table td {
-              border: 1px solid #5E8FB9;
-              padding: 6px 9px;
-              vertical-align: top;
-              color: #4A4A4A;
-            }
-            .grid-table tr { break-inside: avoid; }
-            .box-section { break-inside: avoid; }
-            .proj-title { font-weight: 700; color: #1D2B3A; margin-bottom: 4px; font-size: 12px; }
-            .proj-sub { color: #4A4A4A; font-size: 11px; }
-            .proj-rooms { display: flex; flex-direction: column; gap: 3px; }
-            .proj-room-line { font-size: 11px; color: #4A4A4A; line-height: 1.35; }
-            .item-pb { color: #5E8FB9; font-size: 10.5px; }
-            .item-note { color: #4A4A4A; font-size: 10.5px; margin-top: 2px; }
-            .muted-cell { color: #4A4A4A; padding: 12px; }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .bottom-split {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              gap: 18px;
-              margin-top: 14px;
-              break-inside: avoid;
-            }
-            .notes-col { flex: 1.15; font-size: 11px; color: #4A4A4A; line-height: 1.45; }
-            .notes-col strong { font-size: 12px; color: #1D2B3A; }
-            .notes-col p { margin: 5px 0; }
-            .totals-col { flex: 0.85; min-width: 220px; }
-            .totals-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-            .totals-table td { border: 1px solid #5E8FB9; padding: 6px 9px; }
-            .totals-label { background: #CDE3F5; font-weight: 700; color: #1D2B3A; width: 52%; }
-            .totals-val { text-align: right; color: #1D2B3A; font-weight: 600; background: #FFFFFF; }
-            .totals-grand td { font-weight: 800; font-size: 12.5px; border-top: 2px solid #F5832B; }
-            .contact-sign-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-              gap: 18px;
-              margin-top: 22px;
-              padding-top: 10px;
-              border-top: 1px solid #CDE3F5;
-              break-inside: avoid;
-            }
-            .contact-col { flex: 1; }
-            .contact-heading { font-size: 13px; font-weight: 800; color: #2F5D8A; margin-bottom: 8px; }
-            .contact-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #4A4A4A; margin-bottom: 5px; }
-            .signatures { display: flex; gap: 26px; flex: 1; justify-content: flex-end; }
-            .sig-col { width: 145px; text-align: center; }
-            .sig-role { font-size: 12px; font-weight: 800; color: #2F5D8A; margin-bottom: 24px; }
-            .sig-line { border-bottom: 1.5px solid #5E8FB9; margin-bottom: 5px; }
-            .sig-name { font-size: 11px; font-weight: 700; color: #1D2B3A; }
-            .sig-org { font-size: 10px; color: #4A4A4A; }
-          </style>
-        </head>
-        <body>
-          <div class="page-shell">
-            <div class="corner-tr">$topRightPattern</div>
-            <div class="corner-bl">$bottomLeftPattern</div>
-
-            <div class="content-layer">
-              <div class="top-row">
-                <div>
-                  ${
-                    if (emblemBase64 != null || fullLogoBase64 != null) {
-                        buildString {
-                            append("<div class='brand-badge'>")
-                            if (emblemBase64 != null) {
-                                append("<img src='data:image/png;base64,$emblemBase64' style='width:38px;height:38px;border-radius:5px;object-fit:contain;' />")
-                            }
-                            if (fullLogoBase64 != null) {
-                                append("<img src='data:image/png;base64,$fullLogoBase64' style='height:38px;width:auto;max-width:190px;object-fit:contain;' />")
-                            }
-                            append("</div>")
-                        }
-                    } else {
-                        "<div class='brand-badge' style='color:#FFFFFF;font-size:12px;font-weight:700;'>${esc(companyHeading)} · $docWord</div>"
+        val showBadge = settings.pdfShowBrandBadge && settings.pdfLogoMode != PdfLogoMode.HIDDEN
+        val badgeHtml = if (showBadge) {
+            val useEmblem = settings.pdfLogoMode != PdfLogoMode.LOCKUP_ONLY &&
+                settings.pdfLogoMode != PdfLogoMode.TEXT_BADGE &&
+                emblemBase64 != null
+            val useLockup = settings.pdfLogoMode != PdfLogoMode.EMBLEM_ONLY &&
+                settings.pdfLogoMode != PdfLogoMode.TEXT_BADGE &&
+                fullLogoBase64 != null
+            if (useEmblem || useLockup) {
+                buildString {
+                    append("<div class='brand-badge'>")
+                    if (useEmblem) {
+                        append("<img src='data:image/png;base64,$emblemBase64' style='width:38px;height:38px;border-radius:5px;object-fit:contain;' />")
                     }
-                  }
-                  <div class="title-stack">
-                    <div class="title-company">$companyHeading</div>
-                    <div class="title-doc">$docWord</div>
-                  </div>
-                </div>
+                    if (useLockup) {
+                        append("<img src='data:image/png;base64,$fullLogoBase64' style='height:38px;width:auto;max-width:190px;object-fit:contain;' />")
+                    }
+                    append("</div>")
+                }
+            } else {
+                "<div class='brand-badge' style='color:#FFFFFF;font-size:12px;font-weight:700;'>${esc(companyHeading)} · ${esc(docWord)}</div>"
+            }
+        } else ""
 
-                <div class="meta-col">
-                  <div class="meta-rule"></div>
-                  <div class="meta-label">Date</div>
-                  <div class="meta-val">${esc(draft.date.ifBlank { "—" })}</div>
-                  <div class="meta-label">Number</div>
-                  <div class="meta-val">${esc(docNumber)}</div>
-                  ${
-                    if (isProposal && draft.validUntil.isNotBlank()) {
-                        "<div class='meta-label'>Valid Until</div><div class='meta-val'>${esc(draft.validUntil)}</div>"
-                    } else ""
-                  }
-                </div>
-              </div>
-
-              <div class="section-pill">Customer Information</div>
-
+        val customerSectionHtml = if (settings.pdfShowCustomerSection) {
+            val customerTitle = settings.pdfCustomerSectionTitle.ifBlank { "Customer Information" }
+            """
+              <div class="section-pill">${esc(customerTitle)}</div>
               <div class="cust-grid">
                 <table class="kv-table">
                   <tr>
@@ -478,17 +362,154 @@ object EstimatePrintHelper {
                   </tr>
                 </table>
               </div>
+            """.trimIndent()
+        } else ""
 
-              <div class="main-card">
+        val projectSectionHtml = if (settings.pdfShowProjectDescription) {
+            val projTitle = settings.pdfProjectSectionTitle.ifBlank { "Project Description" }
+            """
                 <table class="grid-table box-section" style="margin-bottom:14px;">
                   <thead>
-                    <tr><th>Project Description</th></tr>
+                    <tr><th>${esc(projTitle)}</th></tr>
                   </thead>
                   <tbody>
                     <tr><td>$projectSummaryHtml</td></tr>
                   </tbody>
                 </table>
+            """.trimIndent()
+        } else ""
 
+        val contactColHtml = if (settings.pdfShowContactSection) {
+            val contactTitle = settings.pdfContactSectionTitle.ifBlank { "Contact Us" }
+            """
+                  <div class="contact-col">
+                    <div class="contact-heading">${esc(contactTitle)}</div>
+                    <div class="contact-item">
+                      <span>${esc(emailLine)}</span>
+                    </div>
+                    <div class="contact-item">
+                      <span>${esc(phoneLine)}</span>
+                    </div>
+                    <div class="contact-item">
+                      <span>${esc(addressLine)}</span>
+                    </div>
+                    ${
+                      if (licenseLine.isNotBlank()) {
+                          "<div class='contact-item'><span>Lic: ${esc(licenseLine)}</span></div>"
+                      } else ""
+                    }
+                  </div>
+            """.trimIndent()
+        } else ""
+
+        val topRightPattern = if (settings.pdfShowCornerPattern) buildCornerPatternSvg(pdfPalette.steelHex, topRight = true) else ""
+        val bottomLeftPattern = if (settings.pdfShowCornerPattern) buildCornerPatternSvg("#FFFFFF", topRight = false) else ""
+        val pageBgCss = if (settings.pdfShowSplitBackdrop) {
+            "linear-gradient(to bottom, ${pdfPalette.softGrayHex} 0%, ${pdfPalette.softGrayHex} 56%, ${pdfPalette.primaryHex} 56%, ${pdfPalette.primaryHex} 100%)"
+        } else {
+            "#FFFFFF"
+        }
+
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            @page { size: letter; margin: 0; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1D2B3A; background: ${pdfPalette.softGrayHex}; }
+            .page-shell {
+              position: relative;
+              min-height: 10.9in;
+              padding: 26px 28px 34px 28px;
+              background: $pageBgCss;
+              overflow: hidden;
+            }
+            .corner-tr { position: absolute; top: 10px; right: 10px; z-index: 1; }
+            .corner-bl { position: absolute; bottom: 10px; left: 10px; z-index: 1; }
+            .content-layer { position: relative; z-index: 2; }
+            .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-right: 118px; margin-bottom: 14px; }
+            .brand-badge { display: inline-flex; align-items: center; gap: 10px; background: ${pdfPalette.deepHex}; border: 2px solid ${pdfPalette.accentHex}; border-radius: 8px; padding: 7px 12px; margin-bottom: 12px; }
+            .title-stack { line-height: 1.02; }
+            .title-company { font-size: 25px; font-weight: 900; color: #1D2B3A; letter-spacing: 0.4px; }
+            .title-doc { font-size: 25px; font-weight: 500; color: ${pdfPalette.primaryHex}; letter-spacing: 0.8px; margin-top: 2px; }
+            .meta-col { min-width: 170px; padding-top: 8px; }
+            .meta-rule { width: 92px; height: 3px; background: ${pdfPalette.accentHex}; margin-bottom: 14px; border-radius: 2px; }
+            .meta-label { font-size: 11px; font-weight: 700; color: #1D2B3A; margin-top: 8px; }
+            .meta-val { font-size: 11.5px; color: #4A4A4A; margin-top: 2px; }
+            .section-pill { background: ${pdfPalette.primaryHex}; color: #FFFFFF; font-size: 13px; font-weight: 700; padding: 7px 16px; border-radius: 99px; border-left: 5px solid ${pdfPalette.accentHex}; margin-bottom: 12px; letter-spacing: 0.2px; }
+            .cust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+            .kv-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background: #FFFFFF; }
+            .kv-table td { border: 1px solid ${pdfPalette.steelHex}; padding: 5px 8px; vertical-align: middle; }
+            .kv-label { width: 84px; background: ${pdfPalette.skyHex}; font-weight: 700; color: #1D2B3A; }
+            .kv-val { color: #4A4A4A; background: #FFFFFF; }
+            .main-card { background: #FFFFFF; border: 1.5px solid ${pdfPalette.steelHex}; border-radius: 14px; padding: 18px 20px; }
+            .grid-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+            .grid-table th { background: ${pdfPalette.skyHex}; color: #1D2B3A; font-weight: 700; text-align: left; border: 1px solid ${pdfPalette.steelHex}; padding: 6px 9px; }
+            .grid-table td { border: 1px solid ${pdfPalette.steelHex}; padding: 6px 9px; vertical-align: top; color: #4A4A4A; }
+            .grid-table tr { break-inside: avoid; }
+            .box-section { break-inside: avoid; }
+            .proj-title { font-weight: 700; color: #1D2B3A; margin-bottom: 4px; font-size: 12px; }
+            .proj-sub { color: #4A4A4A; font-size: 11px; }
+            .proj-rooms { display: flex; flex-direction: column; gap: 3px; }
+            .proj-room-line { font-size: 11px; color: #4A4A4A; line-height: 1.35; }
+            .item-pb { color: ${pdfPalette.steelHex}; font-size: 10.5px; }
+            .item-note { color: #4A4A4A; font-size: 10.5px; margin-top: 2px; }
+            .muted-cell { color: #4A4A4A; padding: 12px; }
+            .center { text-align: center; }
+            .right { text-align: right; }
+            .bottom-split { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-top: 14px; break-inside: avoid; }
+            .notes-col { flex: 1.15; font-size: 11px; color: #4A4A4A; line-height: 1.45; }
+            .notes-col strong { font-size: 12px; color: #1D2B3A; }
+            .notes-col p { margin: 5px 0; }
+            .totals-col { flex: 0.85; min-width: 220px; }
+            .totals-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+            .totals-table td { border: 1px solid ${pdfPalette.steelHex}; padding: 6px 9px; }
+            .totals-label { background: ${pdfPalette.skyHex}; font-weight: 700; color: #1D2B3A; width: 52%; }
+            .totals-val { text-align: right; color: #1D2B3A; font-weight: 600; background: #FFFFFF; }
+            .totals-grand td { font-weight: 800; font-size: 12.5px; border-top: 2px solid ${pdfPalette.accentHex}; }
+            .contact-sign-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-top: 22px; padding-top: 10px; border-top: 1px solid ${pdfPalette.skyHex}; break-inside: avoid; }
+            .contact-col { flex: 1; }
+            .contact-heading { font-size: 13px; font-weight: 800; color: ${pdfPalette.primaryHex}; margin-bottom: 8px; }
+            .contact-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #4A4A4A; margin-bottom: 5px; }
+            .signatures { display: flex; gap: 26px; flex: 1; justify-content: flex-end; }
+            .sig-col { width: 145px; text-align: center; }
+            .sig-role { font-size: 12px; font-weight: 800; color: ${pdfPalette.primaryHex}; margin-bottom: 24px; }
+            .sig-line { border-bottom: 1.5px solid ${pdfPalette.steelHex}; margin-bottom: 5px; }
+            .sig-name { font-size: 11px; font-weight: 700; color: #1D2B3A; }
+            .sig-org { font-size: 10px; color: #4A4A4A; }
+          </style>
+        </head>
+        <body>
+          <div class="page-shell">
+            <div class="corner-tr">$topRightPattern</div>
+            <div class="corner-bl">$bottomLeftPattern</div>
+            <div class="content-layer">
+              <div class="top-row">
+                <div>
+                  $badgeHtml
+                  <div class="title-stack">
+                    <div class="title-company">$companyHeading</div>
+                    <div class="title-doc">${esc(docWord)}</div>
+                  </div>
+                </div>
+                <div class="meta-col">
+                  <div class="meta-rule"></div>
+                  <div class="meta-label">Date</div>
+                  <div class="meta-val">${esc(draft.date.ifBlank { "—" })}</div>
+                  <div class="meta-label">Number</div>
+                  <div class="meta-val">${esc(docNumber)}</div>
+                  ${
+                    if (isProposal && draft.validUntil.isNotBlank()) {
+                        "<div class='meta-label'>Valid Until</div><div class='meta-val'>${esc(draft.validUntil)}</div>"
+                    } else ""
+                  }
+                </div>
+              </div>
+              $customerSectionHtml
+              <div class="main-card">
+                $projectSectionHtml
                 <table class="grid-table">
                   <thead>
                     <tr>
@@ -502,13 +523,9 @@ object EstimatePrintHelper {
                     $serviceRowsHtml
                   </tbody>
                 </table>
-
                 $materialsSectionHtml
-
                 <div class="bottom-split">
-                  <div class="notes-col">
-                    $notesHtml
-                  </div>
+                  <div class="notes-col">$notesHtml</div>
                   <div class="totals-col">
                     <table class="totals-table">
                       <tr>
@@ -531,30 +548,11 @@ object EstimatePrintHelper {
                     </table>
                   </div>
                 </div>
-
-                <div class="contact-sign-row">
-                  <div class="contact-col">
-                    <div class="contact-heading">Contact Us</div>
-                    <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                      <span>${esc(emailLine)}</span>
-                    </div>
-                    <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.46.57 3.58.11.35.03.74-.25 1.01l-2.2 2.2z"/></svg>
-                      <span>${esc(phoneLine)}</span>
-                    </div>
-                    <div class="contact-item">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#2F5D8A" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
-                      <span>${esc(addressLine)}</span>
-                    </div>
-                    ${
-                      if (licenseLine.isNotBlank()) {
-                          "<div class='contact-item'><svg width='13' height='13' viewBox='0 0 24 24' fill='#2F5D8A' xmlns='http://www.w3.org/2000/svg'><path d='M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z'/></svg><span>Lic: ${esc(licenseLine)}</span></div>"
-                      } else ""
-                    }
-                  </div>
-                  $signatureHtml
-                </div>
+                ${
+                  if (settings.pdfShowContactSection || showSignatures) {
+                      "<div class='contact-sign-row'>$contactColHtml$signatureHtml</div>"
+                  } else ""
+                }
               </div>
             </div>
           </div>

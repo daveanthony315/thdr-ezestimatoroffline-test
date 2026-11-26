@@ -152,4 +152,93 @@ class EstimatePrintHelperTest {
         assertTrue(html.contains("Net 15 upon completion."))
         assertFalse(html.contains("class='signatures'"))
     }
+
+    @Test
+    fun pdfCustomizationsDriveHeadingsTogglesColorsAndLabels() {
+        val draft = EstimateDraft(
+            id = 12L,
+            docType = DocumentType.ESTIMATE,
+            customer = "Alex Rivera",
+            project = "Deck Rebuild",
+            date = "2026-11-25"
+        )
+        val takeoff = EstimatorEngine.computeTakeoff(
+            rooms = emptyList(),
+            priceBook = samplePriceBook,
+            manualMaterials = mapOf("Decking Boards (LF)" to 120.0),
+            discount = 0.0,
+            taxPercent = 0.0
+        )
+        val customSettings = AppSettings(
+            companyName = "Apex Builders",
+            pdfCompanyTitleOverride = "Apex Exterior Group",
+            pdfEstimateTitle = "PROJECT QUOTE",
+            pdfDocNumberPrefix = "APEX",
+            pdfColorTheme = com.example.model.PdfColorTheme.FOREST_TIMBER,
+            pdfLogoMode = com.example.model.PdfLogoMode.TEXT_BADGE,
+            pdfShowCustomerSection = false,
+            pdfShowProjectDescription = true,
+            pdfProjectSectionTitle = "Scope Overview",
+            pdfShowMaterialsTable = false,
+            pdfCustomEstimateNotes = "50% deposit upon framing permit approval.",
+            pdfShowContactSection = true,
+            pdfContactSectionTitle = "Reach Our Office",
+            includeSignatureBlockOnEstimate = true,
+            pdfContractorSignatureLabel = "Project Lead",
+            pdfClientSignatureLabel = "Homeowner"
+        )
+
+        val html = EstimatePrintHelper.buildEstimateHtml(
+            draft = draft,
+            takeoff = takeoff,
+            priceBook = samplePriceBook,
+            settings = customSettings
+        )
+
+        assertTrue(html.contains("APEX EXTERIOR GROUP"))
+        assertTrue(html.contains("PROJECT QUOTE"))
+        assertTrue(html.contains("APEX-EST-2026-012"))
+        assertTrue(html.contains("#3C5A3E"))
+        assertTrue(html.contains("Scope Overview"))
+        assertTrue(html.contains("50% deposit upon framing permit approval."))
+        assertTrue(html.contains("Reach Our Office"))
+        assertTrue(html.contains("Project Lead"))
+        assertTrue(html.contains("Homeowner"))
+        assertFalse(html.contains("Customer Information"))
+        assertFalse(html.contains("Materials Takeoff Reference"))
+    }
+
+    @Test
+    fun brandingAndPdfEnumsAndPaletteResolversWorkAccurately() {
+        val accentResolved = EstimatePrintHelper.resolvePdfPalette(
+            AppSettings(
+                accentColor = com.example.model.AppAccentColor.EMERALD_TEAL,
+                pdfColorTheme = com.example.model.PdfColorTheme.MATCH_APP_ACCENT
+            )
+        )
+        assertTrue(accentResolved.accentHex.equals("#6B8A54", ignoreCase = true))
+
+        val docNum = EstimatePrintHelper.buildDocumentNumber(
+            draft = EstimateDraft(id = 7L, docType = DocumentType.PROPOSAL, date = "2026-11-25"),
+            settings = AppSettings(pdfDocNumberPrefix = "custom")
+        )
+        assertTrue(docNum == "CUSTOM-PROP-2026-007")
+
+        org.junit.Assert.assertEquals(
+            com.example.model.HeaderEmblemChoice.CUSTOM,
+            com.example.model.HeaderEmblemChoice.fromKey("custom")
+        )
+        org.junit.Assert.assertEquals(
+            com.example.model.HeroMascotPosition.LEFT,
+            com.example.model.HeroMascotPosition.fromKey("left")
+        )
+        org.junit.Assert.assertEquals(
+            com.example.model.PdfLogoMode.CUSTOM_PDF_IMAGE,
+            com.example.model.PdfLogoMode.fromKey("custom_pdf_image")
+        )
+        org.junit.Assert.assertEquals(
+            com.example.model.PdfColorTheme.MINIMAL_INK,
+            com.example.model.PdfColorTheme.fromKey("minimal_ink")
+        )
+    }
 }

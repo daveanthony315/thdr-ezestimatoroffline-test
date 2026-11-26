@@ -51,7 +51,9 @@ import com.example.domain.EstimatorEngine
 import com.example.model.DocumentType
 import com.example.model.EstimateCatalog
 import com.example.model.EstimateSide
+import com.example.model.MascotSlotChoice
 import com.example.model.SavedProposal
+import com.example.ui.components.BrandingImage
 import com.example.ui.components.ConfirmActionDialog
 import com.example.ui.components.ThdrCard
 import com.example.ui.components.ThdrDoubleField
@@ -207,12 +209,26 @@ fun EstimatorScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.thdr_mascot_badge),
-                                contentDescription = "House DR Estimator Mascot",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(64.dp)
-                            )
+                            if (state.settings.mascotChoice != MascotSlotChoice.HIDDEN) {
+                                val fallbackRes = when (state.settings.mascotChoice) {
+                                    MascotSlotChoice.COMPANY_EMBLEM -> R.drawable.thdr_logo
+                                    MascotSlotChoice.STANDING_MASCOT -> R.drawable.thdr_mascot_avatar
+                                    else -> R.drawable.thdr_mascot_badge
+                                }
+                                val customPath = if (state.settings.mascotChoice == MascotSlotChoice.CUSTOM) {
+                                    state.settings.customMascotPath
+                                } else ""
+                                BrandingImage(
+                                    customPath = customPath,
+                                    fallbackResId = fallbackRes,
+                                    contentDescription = "Company Estimator Badge",
+                                    contentScale = ContentScale.Fit,
+                                    maxDecodePx = 256,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                )
+                            }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "No ${draft.estimateSide.label.lowercase()} areas added yet",
@@ -344,10 +360,17 @@ fun EstimatorScreen(
                             .clip(RoundedCornerShape(15.dp))
                             .background(
                                 Brush.horizontalGradient(
-                                    colors = listOf(palette.primary, palette.primaryDeep, palette.accent.copy(alpha = 0.72f))
+                                    colors = listOf(
+                                        palette.primary.copy(alpha = 0.90f),
+                                        palette.primaryDeep.copy(alpha = 0.92f)
+                                    )
                                 )
                             )
-                            .border(1.dp, palette.outline, RoundedCornerShape(15.dp))
+                            .border(
+                                width = if (isProposal) 1.5.dp else 1.dp,
+                                color = if (isProposal) palette.accent.copy(alpha = 0.80f) else palette.outline,
+                                shape = RoundedCornerShape(15.dp)
+                            )
                             .padding(16.dp)
                     ) {
                         Text(
@@ -502,10 +525,10 @@ private fun SideToggleButton(
     val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) palette.accent.copy(alpha = 0.24f) else palette.surfaceVariant,
+        color = if (selected) palette.primary.copy(alpha = 0.88f) else palette.surfaceVariant.copy(alpha = 0.80f),
         border = BorderStroke(
-            width = if (selected) 2.dp else 1.dp,
-            color = if (selected) palette.accent else palette.outline
+            width = if (selected) 1.5.dp else 1.dp,
+            color = if (selected) palette.brandHighlight else palette.outline
         ),
         modifier = modifier
             .defaultMinSize(minHeight = 48.dp)
@@ -522,7 +545,7 @@ private fun SideToggleButton(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
                 ),
-                color = palette.textPrimary
+                color = if (selected) Color.White else palette.textPrimary
             )
         }
     }
@@ -537,7 +560,7 @@ private fun AreaAddButton(
     val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = palette.surfaceHigh.copy(alpha = 0.6f),
+        color = palette.surfaceHigh.copy(alpha = 0.72f),
         border = BorderStroke(1.dp, palette.outline),
         modifier = Modifier
             .defaultMinSize(minHeight = 48.dp)

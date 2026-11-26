@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -62,28 +67,81 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.domain.BrandingImageStore
+import com.example.model.HeaderEmblemChoice
+import com.example.model.HeroBackdropChoice
 import com.example.ui.theme.LocalThdrPalette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Composable
+fun BrandingImage(
+    customPath: String,
+    @DrawableRes fallbackResId: Int?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    maxDecodePx: Int = 720
+) {
+    val customBitmap by produceState<ImageBitmap?>(initialValue = null, customPath, maxDecodePx) {
+        value = if (customPath.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                BrandingImageStore.loadScaledBitmapFromPath(customPath, maxDecodePx)?.asImageBitmap()
+            }
+        } else {
+            null
+        }
+    }
+
+    if (customBitmap != null) {
+        Image(
+            bitmap = customBitmap!!,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = modifier
+        )
+    } else if (fallbackResId != null) {
+        Image(
+            painter = painterResource(id = fallbackResId),
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = modifier
+        )
+    }
+}
 
 @Composable
 fun BlueprintBackdrop(
     showBlueprintGrid: Boolean = true,
+    heroBackdropChoice: HeroBackdropChoice = HeroBackdropChoice.DEFAULT_BLUEPRINT,
+    customBackdropPath: String = "",
+    backdropOpacityPct: Int = 18,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val palette = LocalThdrPalette.current
+    val effectiveAlpha = (backdropOpacityPct.coerceIn(5, 45) / 100f)
+    val enhancedImageAlpha = if (palette.isDark) {
+        (effectiveAlpha * 1.45f + 0.08f).coerceIn(0.16f, 0.62f)
+    } else {
+        (effectiveAlpha * 1.50f).coerceIn(0.14f, 0.58f)
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(palette.bg)
     ) {
-        if (showBlueprintGrid) {
-            Image(
-                painter = painterResource(id = R.drawable.bg_blueprint),
+        if (showBlueprintGrid && heroBackdropChoice != HeroBackdropChoice.GRADIENT_ONLY) {
+            val useCustom = heroBackdropChoice == HeroBackdropChoice.CUSTOM && customBackdropPath.isNotBlank()
+            BrandingImage(
+                customPath = if (useCustom) customBackdropPath else "",
+                fallbackResId = R.drawable.bg_blueprint,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                maxDecodePx = 1024,
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(if (palette.isDark) 0.24f else 0.15f)
+                    .alpha(enhancedImageAlpha)
             )
         }
         Box(
@@ -100,6 +158,8 @@ fun ThdrHeaderBar(
     savedStatus: String,
     companyName: String = "EZ ESTIMATOR",
     companyTagline: String = "HOUSE DR · INTERIOR / EXTERIOR",
+    headerEmblemChoice: HeaderEmblemChoice = HeaderEmblemChoice.DEFAULT_EMBLEM,
+    customHeaderEmblemPath: String = "",
     onLogoClick: (() -> Unit)? = null,
     onOpenCustomers: (() -> Unit)? = null,
     onOpenSettings: (() -> Unit)? = null,
@@ -132,14 +192,32 @@ fun ThdrHeaderBar(
                         } else Modifier
                     )
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.thdr_logo),
-                    contentDescription = "Company logo",
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                Spacer(modifier = Modifier.width(10.dp))
+                if (headerEmblemChoice != HeaderEmblemChoice.HIDDEN) {
+                    val emblemFallbackRes = when (headerEmblemChoice) {
+                        HeaderEmblemChoice.MASCOT_BADGE -> R.drawable.thdr_mascot_badge
+                        HeaderEmblemChoice.FULL_LOCKUP -> R.drawable.thdr_brand_logo
+                        else -> R.drawable.thdr_logo
+                    }
+                    val customPath = if (headerEmblemChoice == HeaderEmblemChoice.CUSTOM) customHeaderEmblemPath else ""
+                    val logoModifier = if (headerEmblemChoice == HeaderEmblemChoice.FULL_LOCKUP) {
+                        Modifier
+                            .size(width = 56.dp, height = 38.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    } else {
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    }
+                    BrandingImage(
+                        customPath = customPath,
+                        fallbackResId = emblemFallbackRes,
+                        contentDescription = "Company logo",
+                        contentScale = ContentScale.Fit,
+                        maxDecodePx = 256,
+                        modifier = logoModifier
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
                 Column {
                     Text(
                         text = companyName.ifBlank { "EZ ESTIMATOR" }.uppercase(),
@@ -169,8 +247,8 @@ fun ThdrHeaderBar(
             ) {
                 Surface(
                     shape = RoundedCornerShape(99.dp),
-                    color = Color.White.copy(alpha = 0.16f),
-                    border = BorderStroke(1.dp, palette.headerMuted.copy(alpha = 0.65f))
+                    color = palette.headerText.copy(alpha = 0.16f),
+                    border = BorderStroke(1.dp, palette.headerMuted.copy(alpha = 0.60f))
                 ) {
                     Text(
                         text = savedStatus,
@@ -246,7 +324,7 @@ fun ThdrSubCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(palette.surfaceVariant.copy(alpha = 0.94f))
+            .background(palette.surfaceVariant.copy(alpha = 0.82f))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(14.dp))
             .padding(contentPadding)
     ) {
@@ -264,19 +342,26 @@ fun ThdrPrimaryButton(
     orangeAccent: Boolean = false
 ) {
     val palette = LocalThdrPalette.current
-    val brush = if (orangeAccent) {
-        Brush.horizontalGradient(listOf(palette.accent, palette.accentSecondary))
+    val brush = Brush.horizontalGradient(
+        listOf(
+            palette.primary.copy(alpha = 0.94f),
+            palette.primaryDeep.copy(alpha = 0.96f)
+        )
+    )
+    val borderStroke = if (orangeAccent) {
+        BorderStroke(1.5.dp, palette.accent.copy(alpha = 0.85f))
     } else {
-        Brush.horizontalGradient(listOf(palette.primary, palette.primaryDeep, palette.accent))
+        BorderStroke(1.dp, palette.outline.copy(alpha = 0.65f))
     }
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
+        border = borderStroke,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            disabledContainerColor = palette.surfaceVariant
+            disabledContainerColor = palette.surfaceVariant.copy(alpha = 0.72f)
         ),
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
@@ -311,7 +396,7 @@ fun ThdrSecondaryButton(
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, palette.outline),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = palette.surfaceVariant.copy(alpha = 0.88f),
+            containerColor = palette.surfaceVariant.copy(alpha = 0.78f),
             contentColor = palette.textPrimary
         ),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
@@ -341,7 +426,7 @@ fun ThdrDangerButton(
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, palette.danger.copy(alpha = 0.7f)),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = palette.dangerBg,
+            containerColor = palette.dangerBg.copy(alpha = 0.86f),
             contentColor = if (palette.isDark) palette.textPrimary else palette.danger
         ),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
@@ -364,9 +449,9 @@ fun thdrTextFieldColors() = LocalThdrPalette.current.let { palette ->
         focusedTextColor = palette.textPrimary,
         unfocusedTextColor = palette.textPrimary,
         disabledTextColor = palette.textMuted,
-        focusedContainerColor = palette.surfaceVariant,
-        unfocusedContainerColor = palette.surfaceVariant,
-        disabledContainerColor = palette.surfaceVariant.copy(alpha = 0.6f),
+        focusedContainerColor = palette.surfaceVariant.copy(alpha = 0.84f),
+        unfocusedContainerColor = palette.surfaceVariant.copy(alpha = 0.78f),
+        disabledContainerColor = palette.surfaceVariant.copy(alpha = 0.55f),
         focusedBorderColor = palette.brandHighlight,
         unfocusedBorderColor = palette.outline,
         disabledBorderColor = palette.outlineSubtle,
@@ -540,7 +625,7 @@ fun SelectablePill(
     val palette = LocalThdrPalette.current
     Surface(
         shape = RoundedCornerShape(99.dp),
-        color = if (selected) palette.primary else palette.surfaceVariant,
+        color = if (selected) palette.primary.copy(alpha = 0.90f) else palette.surfaceVariant.copy(alpha = 0.80f),
         border = BorderStroke(1.dp, if (selected) palette.brandHighlight else palette.outline),
         modifier = modifier
             .defaultMinSize(minHeight = 40.dp)

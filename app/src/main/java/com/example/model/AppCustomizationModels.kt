@@ -87,6 +87,166 @@ enum class AppAccentColor(
     }
 }
 
+enum class BrandingSlot(val key: String, val label: String) {
+    HEADER_EMBLEM("header_emblem", "Header Emblem"),
+    BRAND_LOCKUP("brand_lockup", "Brand Lockup Logo"),
+    HERO_BACKDROP("hero_backdrop", "Hero / Backdrop Art"),
+    HOME_MASCOT("home_mascot", "Mascot / Badge"),
+    PDF_LOGO("pdf_logo", "PDF Header Logo")
+}
+
+enum class HeaderEmblemChoice(val key: String, val label: String) {
+    DEFAULT_EMBLEM("default_emblem", "House DR Emblem"),
+    MASCOT_BADGE("mascot_badge", "Mascot Badge"),
+    FULL_LOCKUP("full_lockup", "Full Lockup"),
+    CUSTOM("custom", "Custom Upload"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromKey(key: String?): HeaderEmblemChoice =
+            entries.firstOrNull { it.key == key } ?: DEFAULT_EMBLEM
+    }
+}
+
+enum class BrandLogoChoice(val key: String, val label: String) {
+    DEFAULT_LOCKUP("default_lockup", "Full Brand Lockup"),
+    DEFAULT_EMBLEM("default_emblem", "House DR Emblem"),
+    MASCOT_BADGE("mascot_badge", "Mascot Badge"),
+    CUSTOM("custom", "Custom Upload"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromKey(key: String?): BrandLogoChoice =
+            entries.firstOrNull { it.key == key } ?: DEFAULT_LOCKUP
+    }
+}
+
+enum class HeroBackdropChoice(val key: String, val label: String) {
+    DEFAULT_BLUEPRINT("default_blueprint", "Blueprint Scene"),
+    GRADIENT_ONLY("gradient_only", "Clean Gradient"),
+    CUSTOM("custom", "Custom Photo");
+
+    companion object {
+        fun fromKey(key: String?): HeroBackdropChoice =
+            entries.firstOrNull { it.key == key } ?: DEFAULT_BLUEPRINT
+    }
+}
+
+enum class MascotSlotChoice(val key: String, val label: String) {
+    STANDING_MASCOT("standing_mascot", "Standing Mascot"),
+    CIRCULAR_BADGE("circular_badge", "Circular Badge"),
+    COMPANY_EMBLEM("company_emblem", "Company Emblem"),
+    CUSTOM("custom", "Custom Upload"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromKey(key: String?): MascotSlotChoice =
+            entries.firstOrNull { it.key == key } ?: STANDING_MASCOT
+    }
+}
+
+enum class HeroMascotPosition(val key: String, val label: String) {
+    RIGHT("right", "Right"),
+    LEFT("left", "Left"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromKey(key: String?): HeroMascotPosition =
+            entries.firstOrNull { it.key == key } ?: RIGHT
+    }
+}
+
+enum class PdfColorTheme(
+    val key: String,
+    val label: String,
+    val primaryHex: String,
+    val deepHex: String,
+    val steelHex: String,
+    val skyHex: String,
+    val softGrayHex: String,
+    val accentHex: String
+) {
+    HOUSE_DR_SLATE(
+        key = "house_dr_slate",
+        label = "House DR Slate",
+        primaryHex = "#2F5D8A",
+        deepHex = "#22466A",
+        steelHex = "#5E8FB9",
+        skyHex = "#CDE3F5",
+        softGrayHex = "#E6E7EA",
+        accentHex = "#F5832B"
+    ),
+    MATCH_APP_ACCENT(
+        key = "match_app_accent",
+        label = "Match App Accent",
+        primaryHex = "#2F5D8A",
+        deepHex = "#22466A",
+        steelHex = "#5E8FB9",
+        skyHex = "#CDE3F5",
+        softGrayHex = "#E6E7EA",
+        accentHex = "#F5832B"
+    ),
+    CLASSIC_NAVY(
+        key = "classic_navy",
+        label = "Executive Navy",
+        primaryHex = "#1B365D",
+        deepHex = "#11243E",
+        steelHex = "#486D99",
+        skyHex = "#D5E3F3",
+        softGrayHex = "#EBEEF2",
+        accentHex = "#D97724"
+    ),
+    CHARCOAL_ORANGE(
+        key = "charcoal_orange",
+        label = "Charcoal & Orange",
+        primaryHex = "#2D323B",
+        deepHex = "#1C2026",
+        steelHex = "#626B7A",
+        skyHex = "#E2E6EC",
+        softGrayHex = "#F1F2F4",
+        accentHex = "#F5832B"
+    ),
+    FOREST_TIMBER(
+        key = "forest_timber",
+        label = "Sage & Timber",
+        primaryHex = "#3C5A3E",
+        deepHex = "#283E2A",
+        steelHex = "#6E8D63",
+        skyHex = "#DCE8D5",
+        softGrayHex = "#EEF1EC",
+        accentHex = "#A67C52"
+    ),
+    MINIMAL_INK(
+        key = "minimal_ink",
+        label = "Clean Ink & Slate",
+        primaryHex = "#334155",
+        deepHex = "#1E293B",
+        steelHex = "#64748B",
+        skyHex = "#E2E8F0",
+        softGrayHex = "#F8FAFC",
+        accentHex = "#334155"
+    );
+
+    companion object {
+        fun fromKey(key: String?): PdfColorTheme =
+            entries.firstOrNull { it.key == key } ?: HOUSE_DR_SLATE
+    }
+}
+
+enum class PdfLogoMode(val key: String, val label: String) {
+    EMBLEM_AND_LOCKUP("emblem_and_lockup", "Emblem + Full Logo"),
+    EMBLEM_ONLY("emblem_only", "Emblem Only"),
+    LOCKUP_ONLY("lockup_only", "Full Logo Only"),
+    CUSTOM_PDF_IMAGE("custom_pdf_image", "Custom PDF Upload"),
+    TEXT_BADGE("text_badge", "Text Badge Only"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromKey(key: String?): PdfLogoMode =
+            entries.firstOrNull { it.key == key } ?: EMBLEM_AND_LOCKUP
+    }
+}
+
 data class AppSettings(
     val companyName: String = "EZ ESTIMATOR",
     val companyTagline: String = "HOUSE DR · INTERIOR / EXTERIOR",
@@ -113,5 +273,41 @@ data class AppSettings(
     val defaultProposalDepositPct: Double = 25.0,
     val defaultProposalTerms: String = "Pricing valid for 30 days. Work begins upon written approval and deposit. Concealed damage or scope changes require written change order.",
     val includeSignatureBlockOnProposal: Boolean = true,
-    val privacyPolicyUrl: String = ""
+    val privacyPolicyUrl: String = "",
+    // Pre-positioned App Branding Images & Placement
+    val headerEmblemChoice: HeaderEmblemChoice = HeaderEmblemChoice.DEFAULT_EMBLEM,
+    val customHeaderEmblemPath: String = "",
+    val brandLogoChoice: BrandLogoChoice = BrandLogoChoice.DEFAULT_LOCKUP,
+    val customBrandLogoPath: String = "",
+    val heroBackdropChoice: HeroBackdropChoice = HeroBackdropChoice.DEFAULT_BLUEPRINT,
+    val customBackdropPath: String = "",
+    val mascotChoice: MascotSlotChoice = MascotSlotChoice.STANDING_MASCOT,
+    val customMascotPath: String = "",
+    val homeMascotPosition: HeroMascotPosition = HeroMascotPosition.RIGHT,
+    val showHomeHeroBanner: Boolean = true,
+    val backdropOpacityPct: Int = 18,
+    // Complete PDF Customizations
+    val pdfColorTheme: PdfColorTheme = PdfColorTheme.HOUSE_DR_SLATE,
+    val pdfLogoMode: PdfLogoMode = PdfLogoMode.EMBLEM_AND_LOCKUP,
+    val customPdfLogoPath: String = "",
+    val pdfShowBrandBadge: Boolean = true,
+    val pdfShowCornerPattern: Boolean = true,
+    val pdfShowSplitBackdrop: Boolean = true,
+    val pdfCompanyTitleOverride: String = "",
+    val pdfEstimateTitle: String = "ESTIMATE",
+    val pdfProposalTitle: String = "PROPOSAL",
+    val pdfDocNumberPrefix: String = "THDR",
+    val pdfShowCustomerSection: Boolean = true,
+    val pdfCustomerSectionTitle: String = "Customer Information",
+    val pdfShowProjectDescription: Boolean = true,
+    val pdfProjectSectionTitle: String = "Project Description",
+    val pdfShowMaterialsTable: Boolean = true,
+    val pdfMaterialsSectionTitle: String = "Materials Takeoff Reference",
+    val pdfShowNotesSection: Boolean = true,
+    val pdfCustomEstimateNotes: String = "",
+    val pdfShowContactSection: Boolean = true,
+    val pdfContactSectionTitle: String = "Contact Us",
+    val includeSignatureBlockOnEstimate: Boolean = true,
+    val pdfContractorSignatureLabel: String = "Contractor",
+    val pdfClientSignatureLabel: String = "Client"
 )

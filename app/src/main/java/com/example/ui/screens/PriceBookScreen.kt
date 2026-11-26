@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.domain.EstimatorEngine
 import com.example.model.PriceBookConstants
 import com.example.model.PriceViewMode
 import com.example.ui.components.ConfirmActionDialog
@@ -190,7 +191,7 @@ fun PriceBookScreen(
                                 .fillMaxWidth()
                                 .padding(top = 4.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(palette.surfaceVariant)
+                                .background(palette.surfaceVariant.copy(alpha = 0.88f))
                                 .border(1.dp, palette.outline, RoundedCornerShape(10.dp))
                         ) {
                             suggestions.forEach { s ->
@@ -257,8 +258,12 @@ fun PriceBookScreen(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
+                    val baseRateText = EstimatorEngine.formatMoney(
+                        state.settings.defaultHourlyRate,
+                        state.settings.currencySymbol
+                    )
                     Text(
-                        text = "Base labor rate: $85.00 / labor hour · Customer-facing units: SF, LF, EA, STEP, ROOM, and other listed units.",
+                        text = "Base labor rate: $baseRateText / labor hour · Customer-facing units: SF, LF, EA, STEP, ROOM, and other listed units.",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = palette.brandHighlight
                     )
@@ -339,13 +344,13 @@ fun PriceBookScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(15.dp))
-                            .background(palette.surface.copy(alpha = 0.96f))
+                            .background(palette.surface.copy(alpha = 0.85f))
                             .border(1.dp, palette.outline, RoundedCornerShape(15.dp))
                     ) {
                         val headerColors = if (palette.isDark) {
-                            listOf(palette.primary.copy(alpha = 0.65f), palette.surface, palette.accent.copy(alpha = 0.24f))
+                            listOf(palette.primary.copy(alpha = 0.52f), palette.surface.copy(alpha = 0.84f))
                         } else {
-                            listOf(palette.surfaceHigh, palette.surface, palette.accent.copy(alpha = 0.14f))
+                            listOf(palette.surfaceHigh.copy(alpha = 0.80f), palette.surface.copy(alpha = 0.84f))
                         }
                         Row(
                             modifier = Modifier

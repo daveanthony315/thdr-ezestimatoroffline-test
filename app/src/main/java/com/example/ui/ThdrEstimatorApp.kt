@@ -165,7 +165,12 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
         }
     }
 
-    BlueprintBackdrop(showBlueprintGrid = state.settings.showBlueprintBackdrop) {
+    BlueprintBackdrop(
+        showBlueprintGrid = state.settings.showBlueprintBackdrop,
+        heroBackdropChoice = state.settings.heroBackdropChoice,
+        customBackdropPath = state.settings.customBackdropPath,
+        backdropOpacityPct = state.settings.backdropOpacityPct
+    ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val useRail = maxWidth >= 600.dp
             val isWideContent = maxWidth >= 680.dp
@@ -179,6 +184,8 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                         savedStatus = state.headerStatus,
                         companyName = state.settings.companyName,
                         companyTagline = state.settings.companyTagline,
+                        headerEmblemChoice = state.settings.headerEmblemChoice,
+                        customHeaderEmblemPath = state.settings.customHeaderEmblemPath,
                         onLogoClick = { navigateTopLevel(AppRoutes.ROUTE_HOME) },
                         onOpenCustomers = { navigateSubScreen(AppRoutes.ROUTE_CUSTOMERS) },
                         onOpenSettings = { navigateSubScreen(AppRoutes.ROUTE_SETTINGS) },
@@ -190,12 +197,13 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                         Column {
                             HorizontalDivider(thickness = 1.dp, color = palette.outlineSubtle)
                             NavigationBar(
-                                containerColor = palette.surface.copy(alpha = 0.98f),
+                                containerColor = palette.surface.copy(alpha = 0.85f),
                                 contentColor = palette.textPrimary
                             ) {
                                 TopDestination.entries.forEach { dest ->
                                     val selected = currentRoute == dest.route ||
                                         (dest == TopDestination.ESTIMATE && currentRoute == AppRoutes.ROUTE_SAVED_ESTIMATES)
+                                    val selectedTint = if (palette.isDark) palette.brandHighlight else palette.primary
                                     NavigationBarItem(
                                         selected = selected,
                                         onClick = { navigateTopLevel(dest.route) },
@@ -213,9 +221,9 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                             )
                                         },
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = if (palette.isDark) palette.brandHighlight else palette.primary,
-                                            selectedTextColor = palette.accent,
-                                            indicatorColor = palette.surfaceHigh,
+                                            selectedIconColor = selectedTint,
+                                            selectedTextColor = selectedTint,
+                                            indicatorColor = palette.surfaceHigh.copy(alpha = 0.72f),
                                             unselectedIconColor = palette.textMuted,
                                             unselectedTextColor = palette.textMuted
                                         ),
@@ -234,13 +242,14 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                 ) {
                     if (useRail) {
                         NavigationRail(
-                            containerColor = palette.surface.copy(alpha = 0.96f),
+                            containerColor = palette.surface.copy(alpha = 0.85f),
                             contentColor = palette.textPrimary,
                             modifier = Modifier.fillMaxHeight()
                         ) {
                             TopDestination.entries.forEach { dest ->
                                 val selected = currentRoute == dest.route ||
                                     (dest == TopDestination.ESTIMATE && currentRoute == AppRoutes.ROUTE_SAVED_ESTIMATES)
+                                val selectedTint = if (palette.isDark) palette.brandHighlight else palette.primary
                                 NavigationRailItem(
                                     selected = selected,
                                     onClick = { navigateTopLevel(dest.route) },
@@ -252,9 +261,9 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     },
                                     label = { Text(dest.label) },
                                     colors = NavigationRailItemDefaults.colors(
-                                        selectedIconColor = if (palette.isDark) palette.brandHighlight else palette.primary,
-                                        selectedTextColor = palette.accent,
-                                        indicatorColor = palette.surfaceHigh,
+                                        selectedIconColor = selectedTint,
+                                        selectedTextColor = selectedTint,
+                                        indicatorColor = palette.surfaceHigh.copy(alpha = 0.72f),
                                         unselectedIconColor = palette.textMuted,
                                         unselectedTextColor = palette.textMuted
                                     ),
@@ -305,13 +314,6 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     },
                                     onResumeActiveDraft = {
                                         navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
-                                    },
-                                    onOpenSavedDocument = { doc ->
-                                        viewModel.loadSavedProposal(doc)
-                                        navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
-                                    },
-                                    onOpenPrivacyPolicy = {
-                                        navigateSubScreen(AppRoutes.ROUTE_PRIVACY_POLICY)
                                     }
                                 )
                             }

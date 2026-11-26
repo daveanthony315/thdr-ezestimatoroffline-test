@@ -362,6 +362,40 @@ object PriceBookJsonCodec {
             put("defaultProposalTerms", settings.defaultProposalTerms)
             put("includeSignatureBlockOnProposal", settings.includeSignatureBlockOnProposal)
             put("privacyPolicyUrl", settings.privacyPolicyUrl)
+            put("headerEmblemChoice", settings.headerEmblemChoice.key)
+            put("customHeaderEmblemPath", settings.customHeaderEmblemPath)
+            put("brandLogoChoice", settings.brandLogoChoice.key)
+            put("customBrandLogoPath", settings.customBrandLogoPath)
+            put("heroBackdropChoice", settings.heroBackdropChoice.key)
+            put("customBackdropPath", settings.customBackdropPath)
+            put("mascotChoice", settings.mascotChoice.key)
+            put("customMascotPath", settings.customMascotPath)
+            put("homeMascotPosition", settings.homeMascotPosition.key)
+            put("showHomeHeroBanner", settings.showHomeHeroBanner)
+            put("backdropOpacityPct", settings.backdropOpacityPct)
+            put("pdfColorTheme", settings.pdfColorTheme.key)
+            put("pdfLogoMode", settings.pdfLogoMode.key)
+            put("customPdfLogoPath", settings.customPdfLogoPath)
+            put("pdfShowBrandBadge", settings.pdfShowBrandBadge)
+            put("pdfShowCornerPattern", settings.pdfShowCornerPattern)
+            put("pdfShowSplitBackdrop", settings.pdfShowSplitBackdrop)
+            put("pdfCompanyTitleOverride", settings.pdfCompanyTitleOverride)
+            put("pdfEstimateTitle", settings.pdfEstimateTitle)
+            put("pdfProposalTitle", settings.pdfProposalTitle)
+            put("pdfDocNumberPrefix", settings.pdfDocNumberPrefix)
+            put("pdfShowCustomerSection", settings.pdfShowCustomerSection)
+            put("pdfCustomerSectionTitle", settings.pdfCustomerSectionTitle)
+            put("pdfShowProjectDescription", settings.pdfShowProjectDescription)
+            put("pdfProjectSectionTitle", settings.pdfProjectSectionTitle)
+            put("pdfShowMaterialsTable", settings.pdfShowMaterialsTable)
+            put("pdfMaterialsSectionTitle", settings.pdfMaterialsSectionTitle)
+            put("pdfShowNotesSection", settings.pdfShowNotesSection)
+            put("pdfCustomEstimateNotes", settings.pdfCustomEstimateNotes)
+            put("pdfShowContactSection", settings.pdfShowContactSection)
+            put("pdfContactSectionTitle", settings.pdfContactSectionTitle)
+            put("includeSignatureBlockOnEstimate", settings.includeSignatureBlockOnEstimate)
+            put("pdfContractorSignatureLabel", settings.pdfContractorSignatureLabel)
+            put("pdfClientSignatureLabel", settings.pdfClientSignatureLabel)
         }.toString()
     }
 
@@ -395,7 +429,41 @@ object PriceBookJsonCodec {
             defaultProposalDepositPct = root.optDouble("defaultProposalDepositPct", defaults.defaultProposalDepositPct).finiteOrZero(),
             defaultProposalTerms = root.optString("defaultProposalTerms", defaults.defaultProposalTerms),
             includeSignatureBlockOnProposal = root.optBoolean("includeSignatureBlockOnProposal", defaults.includeSignatureBlockOnProposal),
-            privacyPolicyUrl = root.optString("privacyPolicyUrl", defaults.privacyPolicyUrl)
+            privacyPolicyUrl = root.optString("privacyPolicyUrl", defaults.privacyPolicyUrl),
+            headerEmblemChoice = com.example.model.HeaderEmblemChoice.fromKey(root.optString("headerEmblemChoice", defaults.headerEmblemChoice.key)),
+            customHeaderEmblemPath = root.optString("customHeaderEmblemPath", defaults.customHeaderEmblemPath),
+            brandLogoChoice = com.example.model.BrandLogoChoice.fromKey(root.optString("brandLogoChoice", defaults.brandLogoChoice.key)),
+            customBrandLogoPath = root.optString("customBrandLogoPath", defaults.customBrandLogoPath),
+            heroBackdropChoice = com.example.model.HeroBackdropChoice.fromKey(root.optString("heroBackdropChoice", defaults.heroBackdropChoice.key)),
+            customBackdropPath = root.optString("customBackdropPath", defaults.customBackdropPath),
+            mascotChoice = com.example.model.MascotSlotChoice.fromKey(root.optString("mascotChoice", defaults.mascotChoice.key)),
+            customMascotPath = root.optString("customMascotPath", defaults.customMascotPath),
+            homeMascotPosition = com.example.model.HeroMascotPosition.fromKey(root.optString("homeMascotPosition", defaults.homeMascotPosition.key)),
+            showHomeHeroBanner = root.optBoolean("showHomeHeroBanner", defaults.showHomeHeroBanner),
+            backdropOpacityPct = root.optInt("backdropOpacityPct", defaults.backdropOpacityPct).coerceIn(5, 45),
+            pdfColorTheme = com.example.model.PdfColorTheme.fromKey(root.optString("pdfColorTheme", defaults.pdfColorTheme.key)),
+            pdfLogoMode = com.example.model.PdfLogoMode.fromKey(root.optString("pdfLogoMode", defaults.pdfLogoMode.key)),
+            customPdfLogoPath = root.optString("customPdfLogoPath", defaults.customPdfLogoPath),
+            pdfShowBrandBadge = root.optBoolean("pdfShowBrandBadge", defaults.pdfShowBrandBadge),
+            pdfShowCornerPattern = root.optBoolean("pdfShowCornerPattern", defaults.pdfShowCornerPattern),
+            pdfShowSplitBackdrop = root.optBoolean("pdfShowSplitBackdrop", defaults.pdfShowSplitBackdrop),
+            pdfCompanyTitleOverride = root.optString("pdfCompanyTitleOverride", defaults.pdfCompanyTitleOverride),
+            pdfEstimateTitle = root.optString("pdfEstimateTitle", defaults.pdfEstimateTitle),
+            pdfProposalTitle = root.optString("pdfProposalTitle", defaults.pdfProposalTitle),
+            pdfDocNumberPrefix = root.optString("pdfDocNumberPrefix", defaults.pdfDocNumberPrefix),
+            pdfShowCustomerSection = root.optBoolean("pdfShowCustomerSection", defaults.pdfShowCustomerSection),
+            pdfCustomerSectionTitle = root.optString("pdfCustomerSectionTitle", defaults.pdfCustomerSectionTitle),
+            pdfShowProjectDescription = root.optBoolean("pdfShowProjectDescription", defaults.pdfShowProjectDescription),
+            pdfProjectSectionTitle = root.optString("pdfProjectSectionTitle", defaults.pdfProjectSectionTitle),
+            pdfShowMaterialsTable = root.optBoolean("pdfShowMaterialsTable", defaults.pdfShowMaterialsTable),
+            pdfMaterialsSectionTitle = root.optString("pdfMaterialsSectionTitle", defaults.pdfMaterialsSectionTitle),
+            pdfShowNotesSection = root.optBoolean("pdfShowNotesSection", defaults.pdfShowNotesSection),
+            pdfCustomEstimateNotes = root.optString("pdfCustomEstimateNotes", defaults.pdfCustomEstimateNotes),
+            pdfShowContactSection = root.optBoolean("pdfShowContactSection", defaults.pdfShowContactSection),
+            pdfContactSectionTitle = root.optString("pdfContactSectionTitle", defaults.pdfContactSectionTitle),
+            includeSignatureBlockOnEstimate = root.optBoolean("includeSignatureBlockOnEstimate", defaults.includeSignatureBlockOnEstimate),
+            pdfContractorSignatureLabel = root.optString("pdfContractorSignatureLabel", defaults.pdfContractorSignatureLabel),
+            pdfClientSignatureLabel = root.optString("pdfClientSignatureLabel", defaults.pdfClientSignatureLabel)
         )
     }
 

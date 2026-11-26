@@ -87,8 +87,8 @@ fun CategoryBulkEditorCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.warningContainer)
-            .border(1.dp, palette.accent.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+            .background(palette.surfaceHigh.copy(alpha = 0.76f))
+            .border(1.dp, palette.outline, RoundedCornerShape(12.dp))
             .padding(10.dp)
     ) {
         Row(
@@ -103,13 +103,13 @@ fun CategoryBulkEditorCard(
             Text(
                 text = "Edit category information & apply to all subcategories",
                 style = MaterialTheme.typography.titleSmall,
-                color = palette.warning,
+                color = palette.brandHighlight,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = "Toggle category bulk editor",
-                tint = palette.warning
+                tint = palette.brandHighlight
             )
         }
 
@@ -251,13 +251,13 @@ fun PriceBookSubcategoryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceVariant)
+            .background(palette.surfaceVariant.copy(alpha = 0.82f))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(palette.surfaceHigh.copy(alpha = 0.7f))
+                .background(palette.surfaceHigh.copy(alpha = 0.72f))
                 .clickable { expanded = !expanded }
                 .padding(12.dp)
         ) {
@@ -430,7 +430,7 @@ fun PriceBookSubcategoryCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(palette.surfaceHigh.copy(alpha = 0.85f))
+                            .background(palette.surfaceHigh.copy(alpha = 0.74f))
                             .border(1.dp, palette.outline, RoundedCornerShape(10.dp))
                             .padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -518,7 +518,7 @@ fun TimeframeBenchmarkCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(palette.surfaceVariant)
+            .background(palette.surfaceVariant.copy(alpha = 0.82f))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {

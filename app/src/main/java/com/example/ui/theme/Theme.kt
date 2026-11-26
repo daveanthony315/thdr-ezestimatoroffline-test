@@ -55,7 +55,7 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             isDark = false,
             bg = SoftGray,
             surface = CleanWhite,
-            surfaceVariant = Color(0xFFF3F7FB),
+            surfaceVariant = Color(0xFFF1F5FA),
             surfaceHigh = SkyBlue,
             primary = SlateBlue,
             primaryDeep = SlateBlueDeep,
@@ -64,7 +64,7 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             brandHighlight = SlateBlue,
             textPrimary = SlateInk,
             textMuted = Charcoal,
-            outline = SteelBlue.copy(alpha = 0.55f),
+            outline = SteelBlue.copy(alpha = 0.52f),
             outlineSubtle = SteelBlue.copy(alpha = 0.28f),
             danger = Color(0xFFC23B36),
             dangerBg = Color(0xFFFCEAEA),
@@ -76,19 +76,19 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             headerMuted = SkyBlue,
             onAccentContainer = CleanWhite,
             backdropGradient = listOf(
-                SoftGray.copy(alpha = 0.88f),
-                SkyBlue.copy(alpha = 0.52f),
-                SoftGray.copy(alpha = 0.92f)
+                SlateBlue.copy(alpha = 0.16f),
+                SkyBlue.copy(alpha = 0.38f),
+                SoftGray.copy(alpha = 0.64f)
             ),
             headerGradient = listOf(
-                SlateBlue,
-                SlateBlueDeep,
-                SteelBlue
+                SlateBlueDeep.copy(alpha = 0.90f),
+                SlateBlue.copy(alpha = 0.90f),
+                SteelBlue.copy(alpha = 0.88f)
             ),
             cardGradient = listOf(
-                CleanWhite,
-                Color(0xFFFAFBFD),
-                SkyBlue.copy(alpha = 0.22f)
+                CleanWhite.copy(alpha = 0.86f),
+                Color(0xFFF3F7FC).copy(alpha = 0.84f),
+                SkyBlue.copy(alpha = 0.34f)
             )
         )
 
@@ -105,8 +105,8 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             brandHighlight = SkyBlue,
             textPrimary = CleanWhite,
             textMuted = SkyBlue,
-            outline = SteelBlue.copy(alpha = 0.65f),
-            outlineSubtle = SteelBlue.copy(alpha = 0.35f),
+            outline = SteelBlue.copy(alpha = 0.60f),
+            outlineSubtle = SteelBlue.copy(alpha = 0.34f),
             danger = Color(0xFFE0635F),
             dangerBg = Color(0xFF4D2124),
             warning = WarmYellow,
@@ -117,19 +117,19 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             headerMuted = SkyBlue,
             onAccentContainer = CleanWhite,
             backdropGradient = listOf(
-                BlueprintBg.copy(alpha = 0.76f),
-                SlateBlueDeep.copy(alpha = 0.84f),
-                accent.copy(alpha = 0.16f)
+                BlueprintBg.copy(alpha = 0.56f),
+                SlateBlueDeep.copy(alpha = 0.64f),
+                SteelBlue.copy(alpha = 0.18f)
             ),
             headerGradient = listOf(
-                SlateBlueDeep,
-                BlueprintSurface,
-                accent.copy(alpha = 0.32f)
+                SlateBlueDeep.copy(alpha = 0.90f),
+                BlueprintSurface.copy(alpha = 0.90f),
+                SlateBlue.copy(alpha = 0.86f)
             ),
             cardGradient = listOf(
-                BlueprintSurface.copy(alpha = 0.96f),
-                BlueprintBg.copy(alpha = 0.96f),
-                SteelBlue.copy(alpha = 0.16f)
+                BlueprintSurface.copy(alpha = 0.85f),
+                BlueprintBg.copy(alpha = 0.85f),
+                SteelBlue.copy(alpha = 0.18f)
             )
         )
 
@@ -158,19 +158,19 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             headerMuted = SkyBlue,
             onAccentContainer = CleanWhite,
             backdropGradient = listOf(
-                Color(0xD91D2229),
-                Color(0xEB232A33),
-                accent.copy(alpha = 0.14f)
+                Color(0x9E1D2229),
+                Color(0xB3232A33),
+                SlateBlue.copy(alpha = 0.18f)
             ),
             headerGradient = listOf(
-                Color(0xFF2C3643),
-                SlateBlueDeep,
-                accent.copy(alpha = 0.25f)
+                Color(0xE6252C36),
+                SlateBlueDeep.copy(alpha = 0.90f),
+                Color(0xE02C3643)
             ),
             cardGradient = listOf(
-                Color(0xF52A313B),
-                Color(0xF5222830),
-                SteelBlue.copy(alpha = 0.12f)
+                Color(0xD92A313B),
+                Color(0xDB222830),
+                SteelBlue.copy(alpha = 0.14f)
             )
         )
 
@@ -187,8 +187,8 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             brandHighlight = SageGreen,
             textPrimary = CleanWhite,
             textMuted = Color(0xFFD2DEC8),
-            outline = SageGreen.copy(alpha = 0.6f),
-            outlineSubtle = SageGreen.copy(alpha = 0.35f),
+            outline = SageGreen.copy(alpha = 0.58f),
+            outlineSubtle = SageGreen.copy(alpha = 0.34f),
             danger = Color(0xFFE0635F),
             dangerBg = Color(0xFF491E22),
             warning = WarmYellow,
@@ -199,19 +199,19 @@ fun paletteFor(settings: AppSettings): ThdrPalette {
             headerMuted = Color(0xFFD7E6CC),
             onAccentContainer = CleanWhite,
             backdropGradient = listOf(
-                Color(0xD91A2420),
-                Color(0xE8212E28),
-                WoodBrown.copy(alpha = 0.18f)
+                Color(0x9E1A2420),
+                Color(0xB3212E28),
+                SageGreen.copy(alpha = 0.16f)
             ),
             headerGradient = listOf(
-                Color(0xFF27392E),
-                SlateBlueDeep,
-                WoodBrown.copy(alpha = 0.28f)
+                Color(0xE6213028),
+                Color(0xE6344936),
+                Color(0xE027392E)
             ),
             cardGradient = listOf(
-                Color(0xF525352E),
-                Color(0xF51E2B25),
-                SageGreen.copy(alpha = 0.14f)
+                Color(0xD925352E),
+                Color(0xDB1E2B25),
+                SageGreen.copy(alpha = 0.16f)
             )
         )
     }

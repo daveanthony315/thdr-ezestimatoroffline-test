@@ -32,11 +32,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,6 +63,7 @@ import com.example.model.AppSettings
 import com.example.model.AppThemePreset
 import com.example.model.BrandLogoChoice
 import com.example.model.BrandingSlot
+import com.example.model.CustomColorScheme
 import com.example.model.EstimateSide
 import com.example.model.HeaderEmblemChoice
 import com.example.model.HeroBackdropChoice
@@ -77,19 +82,24 @@ import com.example.ui.theme.LocalThdrPalette
 import com.example.ui.theme.ThdrTheme
 import com.example.viewmodel.EstimatorUiState
 import com.example.viewmodel.EstimatorViewModel
+import java.util.UUID
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     state: EstimatorUiState,
     viewModel: EstimatorViewModel,
-    onOpenPrivacyPolicy: () -> Unit = {}
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onBack: () -> Unit = {},
+    onGoHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var draftSettings by remember { mutableStateOf(state.settings) }
     var lastCommittedSettings by remember { mutableStateOf(state.settings) }
     var pendingImageSlot by remember { mutableStateOf<BrandingSlot?>(null) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
+    var editingSchemePair by remember { mutableStateOf<Pair<CustomColorScheme, Boolean>?>(null) }
+    var pendingExportScheme by remember { mutableStateOf<CustomColorScheme?>(null) }
     var backupStatusText by remember { mutableStateOf("") }
     var showResetDialog by remember { mutableStateOf(false) }
     var showPrivacySections by remember { mutableStateOf(false) }
@@ -109,6 +119,46 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             pendingRestoreUri = uri
+        }
+    }
+
+    val exportSchemeLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val scheme = pendingExportScheme
+        pendingExportScheme = null
+        if (uri != null && scheme != null) {
+            viewModel.exportColorSchemeToUri(uri, scheme) { msg ->
+                backupStatusText = msg
+            }
+        }
+    }
+
+    val importSchemeLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importColorSchemeFromUri(
+                uri = uri,
+                onImported = { imported ->
+                    val newId = UUID.randomUUID().toString()
+                    val existingNames = draftSettings.customColorSchemes.map { it.name.lowercase() }.toSet()
+                    val finalName = if (imported.name.lowercase() in existingNames) {
+                        "${imported.name} (Imported)"
+                    } else {
+                        imported.name
+                    }
+                    val finalScheme = imported.copy(id = newId, name = finalName)
+                    draftSettings = draftSettings.copy(
+                        customColorSchemes = draftSettings.customColorSchemes + finalScheme,
+                        activeCustomSchemeId = newId
+                    )
+                    backupStatusText = "Imported & applied \"${finalScheme.name}\". Tap Save Customizations to keep."
+                },
+                onError = { err ->
+                    backupStatusText = err
+                }
+            )
         }
     }
 
@@ -202,6 +252,14 @@ fun SettingsScreen(
         viewModel.saveSettings(draftSettings)
     }
 
+    fun refreshFromSavedSettings() {
+        cleanupDraftOrphanImages()
+        lastCommittedSettings = state.settings
+        draftSettings = state.settings
+        backupStatusText = "Refreshed from saved settings"
+        viewModel.notifySettingsRefreshed()
+    }
+
     ThdrTheme(settings = draftSettings) {
         val palette = LocalThdrPalette.current
 
@@ -224,12 +282,32 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                IconButton(
+                                    onClick = onBack,
+                                    modifier = Modifier.testTag("settings_back_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = palette.textPrimary
+                                    )
+                                }
                                 Text(
                                     text = "Settings & Customizations",
                                     style = MaterialTheme.typography.headlineMedium,
                                     color = palette.textPrimary,
                                     modifier = Modifier.weight(1f)
                                 )
+                                IconButton(
+                                    onClick = onGoHome,
+                                    modifier = Modifier.testTag("settings_home_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = "Go to Home",
+                                        tint = palette.brandHighlight
+                                    )
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(99.dp),
                                     color = if (hasUnsavedChanges) palette.accent.copy(alpha = 0.18f) else palette.primary.copy(alpha = 0.16f),
@@ -279,7 +357,8 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     ThdrPrimaryButton(
                                         text = "Import / Restore",
@@ -303,6 +382,16 @@ fun SettingsScreen(
                                         testTag = "settings_export_backup_btn",
                                         modifier = Modifier.weight(1f)
                                     )
+                                    IconButton(
+                                        onClick = ::refreshFromSavedSettings,
+                                        modifier = Modifier.testTag("settings_refresh_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = "Refresh saved settings",
+                                            tint = palette.brandHighlight
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -380,25 +469,107 @@ fun SettingsScreen(
                     }
                 }
 
-                // 3. Theme & Display
+                // 3. Theme, Color Schemes & Display
                 item {
                     Box(modifier = Modifier.widthIn(max = 980.dp)) {
                         ThdrCard {
-                            Text(
-                                text = "3. Theme & Visual Appearance",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = palette.textPrimary
-                            )
+                            val activeCustom = draftSettings.activeCustomScheme()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "3. Theme, Color Schemes & Visuals",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = palette.textPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (activeCustom != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(99.dp),
+                                        color = palette.accent.copy(alpha = 0.20f),
+                                        border = BorderStroke(1.dp, palette.accent)
+                                    ) {
+                                        Text(
+                                            text = "CUSTOM: ${activeCustom.name}",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = palette.textPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                            }
                             Spacer(modifier = Modifier.height(10.dp))
+
+                            CustomColorSchemesSection(
+                                schemes = draftSettings.customColorSchemes,
+                                activeCustomSchemeId = draftSettings.activeCustomSchemeId,
+                                onCreateScheme = {
+                                    val newId = UUID.randomUUID().toString()
+                                    val nextNum = draftSettings.customColorSchemes.size + 1
+                                    val starter = draftSettings.starterSchemeFromCurrent(
+                                        newId = newId,
+                                        name = "Custom Scheme $nextNum"
+                                    )
+                                    editingSchemePair = starter to false
+                                },
+                                onImportScheme = {
+                                    importSchemeLauncher.launch(arrayOf("application/json", "*/*"))
+                                },
+                                onApplyScheme = { scheme ->
+                                    draftSettings = draftSettings.copy(activeCustomSchemeId = scheme.id)
+                                },
+                                onEditScheme = { scheme ->
+                                    editingSchemePair = scheme to true
+                                },
+                                onDuplicateScheme = { scheme ->
+                                    val copyId = UUID.randomUUID().toString()
+                                    val dup = scheme.copy(
+                                        id = copyId,
+                                        name = "${scheme.name} Copy"
+                                    )
+                                    draftSettings = draftSettings.copy(
+                                        customColorSchemes = draftSettings.customColorSchemes + dup,
+                                        activeCustomSchemeId = copyId
+                                    )
+                                },
+                                onExportScheme = { scheme ->
+                                    pendingExportScheme = scheme
+                                    val slug = scheme.name.trim()
+                                        .replace(Regex("[^A-Za-z0-9_-]+"), "_")
+                                        .ifBlank { "Custom_Scheme" }
+                                    exportSchemeLauncher.launch("${slug}_Theme.json")
+                                },
+                                onDeleteScheme = { scheme ->
+                                    val remaining = draftSettings.customColorSchemes.filterNot { it.id == scheme.id }
+                                    val nextActive = if (draftSettings.activeCustomSchemeId == scheme.id) {
+                                        ""
+                                    } else {
+                                        draftSettings.activeCustomSchemeId
+                                    }
+                                    draftSettings = draftSettings.copy(
+                                        customColorSchemes = remaining,
+                                        activeCustomSchemeId = nextActive
+                                    )
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = "Theme Preset",
+                                text = if (activeCustom != null) {
+                                    "Built-In Theme Presets (tap any preset to switch off \"${activeCustom.name}\")"
+                                } else {
+                                    "Built-In Theme Preset"
+                                },
                                 style = MaterialTheme.typography.labelLarge,
                                 color = palette.textMuted
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AppThemePreset.entries.forEach { preset ->
-                                    val selected = draftSettings.themePreset == preset
+                                    val selected = draftSettings.activeCustomSchemeId.isBlank() &&
+                                        draftSettings.themePreset == preset
                                     Surface(
                                         shape = RoundedCornerShape(12.dp),
                                         color = if (selected) palette.primary.copy(alpha = 0.22f) else palette.surfaceVariant.copy(alpha = 0.82f),
@@ -411,7 +582,10 @@ fun SettingsScreen(
                                             .defaultMinSize(minHeight = 52.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                             .clickable {
-                                                draftSettings = draftSettings.copy(themePreset = preset)
+                                                draftSettings = draftSettings.copy(
+                                                    themePreset = preset,
+                                                    activeCustomSchemeId = ""
+                                                )
                                             }
                                             .testTag("settings_theme_${preset.key}")
                                     ) {
@@ -454,7 +628,8 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 AppAccentColor.entries.forEach { accent ->
-                                    val selected = draftSettings.accentColor == accent
+                                    val selected = draftSettings.activeCustomSchemeId.isBlank() &&
+                                        draftSettings.accentColor == accent
                                     Surface(
                                         shape = RoundedCornerShape(99.dp),
                                         color = if (selected) palette.primary.copy(alpha = 0.90f) else palette.surfaceVariant.copy(alpha = 0.80f),
@@ -463,7 +638,10 @@ fun SettingsScreen(
                                             .defaultMinSize(minHeight = 44.dp)
                                             .clip(RoundedCornerShape(99.dp))
                                             .clickable {
-                                                draftSettings = draftSettings.copy(accentColor = accent)
+                                                draftSettings = draftSettings.copy(
+                                                    accentColor = accent,
+                                                    activeCustomSchemeId = ""
+                                                )
                                             }
                                             .testTag("settings_accent_${accent.key}")
                                     ) {
@@ -578,6 +756,16 @@ fun SettingsScreen(
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ThdrTextField(
+                                value = draftSettings.currencySymbol,
+                                onValueChange = { raw ->
+                                    draftSettings = draftSettings.copy(currencySymbol = raw.take(6))
+                                },
+                                label = "Custom Currency Symbol",
+                                placeholder = "$",
+                                testTag = "settings_currency_custom"
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "Default Work Side for New Estimates",
@@ -908,7 +1096,7 @@ fun SettingsScreen(
             // Sticky Bottom Save Bar
             HorizontalDivider(thickness = 1.dp, color = palette.outline)
             Surface(
-                color = palette.surface.copy(alpha = 0.85f),
+                color = palette.surface.copy(alpha = palette.navBarAlpha),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
@@ -919,9 +1107,19 @@ fun SettingsScreen(
                 ) {
                     Row(
                         modifier = Modifier.widthIn(max = 980.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        IconButton(
+                            onClick = ::refreshFromSavedSettings,
+                            modifier = Modifier.testTag("settings_bottom_refresh_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh saved settings",
+                                tint = palette.brandHighlight
+                            )
+                        }
                         if (hasUnsavedChanges) {
                             ThdrSecondaryButton(
                                 text = "Discard",
@@ -941,10 +1139,34 @@ fun SettingsScreen(
             }
         }
 
+        editingSchemePair?.let { (initialScheme, isEditing) ->
+            CustomColorSchemeEditorDialog(
+                initialScheme = initialScheme,
+                isEditingExisting = isEditing,
+                currentSettingsSnapshot = draftSettings,
+                onSave = { savedScheme ->
+                    val exists = draftSettings.customColorSchemes.any { it.id == savedScheme.id }
+                    val updatedList = if (exists) {
+                        draftSettings.customColorSchemes.map {
+                            if (it.id == savedScheme.id) savedScheme else it
+                        }
+                    } else {
+                        draftSettings.customColorSchemes + savedScheme
+                    }
+                    draftSettings = draftSettings.copy(
+                        customColorSchemes = updatedList,
+                        activeCustomSchemeId = savedScheme.id
+                    )
+                    editingSchemePair = null
+                },
+                onDismiss = { editingSchemePair = null }
+            )
+        }
+
         if (showResetDialog) {
             ConfirmActionDialog(
                 title = "Reset Settings to Defaults?",
-                message = "This will restore default theme, company branding, uploaded logos, PDF customization, waste %, and proposal terms. Your saved Estimates, Proposals, Customers, and Price Book will remain safe.",
+                message = "This will restore default theme, custom color schemes, company branding, uploaded logos, PDF customization, waste %, and proposal terms. Your saved Estimates, Proposals, Customers, and Price Book will remain safe.",
                 confirmText = "Reset",
                 onConfirm = {
                     val defaults = AppSettings()
@@ -959,7 +1181,7 @@ fun SettingsScreen(
         pendingRestoreUri?.let { restoreUri ->
             ConfirmActionDialog(
                 title = "Restore Settings & Images?",
-                message = "Importing this backup will overwrite your current Settings, theme, PDF layout, and custom branding images. Your saved Estimates, Proposals, Customers, and Price Book will not be changed.",
+                message = "Importing this backup will overwrite your current Settings, theme, custom color schemes, PDF layout, and custom branding images. Your saved Estimates, Proposals, Customers, and Price Book will not be changed.",
                 confirmText = "Restore",
                 onConfirm = {
                     viewModel.importSettingsBundleFromUri(

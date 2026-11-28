@@ -240,5 +240,26 @@ class EstimatePrintHelperTest {
             com.example.model.PdfColorTheme.MINIMAL_INK,
             com.example.model.PdfColorTheme.fromKey("minimal_ink")
         )
+
+        val customScheme = com.example.model.CustomColorScheme(
+            id = "scheme-forest",
+            name = "Forest Brass",
+            isDark = false,
+            primaryHex = "#264E36",
+            secondaryHex = "#5A8A6C",
+            accentHex = "#D9822B",
+            backgroundHex = "#ECEFEA"
+        )
+        val matchedPdf = EstimatePrintHelper.resolvePdfPalette(
+            AppSettings(
+                customColorSchemes = listOf(customScheme),
+                activeCustomSchemeId = "scheme-forest",
+                pdfColorTheme = com.example.model.PdfColorTheme.MATCH_ACTIVE_THEME
+            )
+        )
+        assertTrue(matchedPdf.primaryHex.equals("#264E36", ignoreCase = true))
+        assertTrue(matchedPdf.steelHex.equals("#5A8A6C", ignoreCase = true))
+        assertTrue(matchedPdf.accentHex.equals("#D9822B", ignoreCase = true))
+        assertTrue(matchedPdf.softGrayHex.equals("#ECEFEA", ignoreCase = true))
     }
 }

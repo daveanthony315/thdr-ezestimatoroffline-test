@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -162,7 +163,8 @@ fun openExternalUrl(context: Context, url: String) {
 @Composable
 fun PrivacyPolicyScreen(
     settings: AppSettings,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onGoHome: () -> Unit = {}
 ) {
     val palette = LocalThdrPalette.current
     val context = LocalContext.current
@@ -241,6 +243,18 @@ fun PrivacyPolicyScreen(
                                 text = "Effective ${PrivacyPolicyDocument.EFFECTIVE_DATE} · On-Device First",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = palette.brandHighlight
+                            )
+                        }
+                        IconButton(
+                            onClick = onGoHome,
+                            modifier = Modifier
+                                .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                                .testTag("privacy_home_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Go to Home",
+                                tint = palette.brandHighlight
                             )
                         }
                     }

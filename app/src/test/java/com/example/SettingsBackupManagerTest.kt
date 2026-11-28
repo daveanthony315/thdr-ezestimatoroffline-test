@@ -127,4 +127,53 @@ class SettingsBackupManagerTest {
         assertEquals(MascotSlotChoice.STANDING_MASCOT, reconciled.mascotChoice)
         assertEquals("", reconciled.customMascotPath)
     }
+
+    @Test
+    fun colorHexCodecValidatesNormalizesAndBlendsCorrectly() {
+        assertTrue(com.example.model.ColorHexCodec.isValidHex("#2f5d8a"))
+        assertTrue(com.example.model.ColorHexCodec.isValidHex("abc"))
+        assertFalse(com.example.model.ColorHexCodec.isValidHex("#12345"))
+        assertFalse(com.example.model.ColorHexCodec.isValidHex("#ZZZZZZ"))
+
+        assertEquals("#AABBCC", com.example.model.ColorHexCodec.normalizeHex("abc", "#000000"))
+        assertEquals("#2F5D8A", com.example.model.ColorHexCodec.normalizeHex(" 2f5d8a ", "#000000"))
+        assertEquals("#112233", com.example.model.ColorHexCodec.normalizeHex("xyz", "#112233"))
+
+        assertEquals(0xFF2F5D8AL, com.example.model.ColorHexCodec.parseArgbLong("#2F5D8A", 0L))
+        assertEquals("#F5832B", com.example.model.ColorHexCodec.argbLongToHex(0xFFF5832BL))
+
+        val dark = com.example.model.ColorHexCodec.darkenHex("#FFFFFF", 0.5f)
+        val light = com.example.model.ColorHexCodec.lightenHex("#000000", 0.5f)
+        assertEquals("#7F7F7F", dark)
+        assertEquals("#7F7F7F", light)
+        assertTrue(com.example.model.ColorHexCodec.relativeLuminance("#FFFFFF") > 0.99f)
+        assertTrue(com.example.model.ColorHexCodec.relativeLuminance("#000000") < 0.01f)
+    }
+
+    @Test
+    fun appSettingsResolvesActiveCustomSchemeAndStarterSnapshot() {
+        val scheme = com.example.model.CustomColorScheme(
+            id = "custom-1",
+            name = "Copper Blueprint",
+            isDark = true,
+            primaryHex = "#1E3A5F",
+            accentHex = "#F5832B",
+            cardOpacityPct = 82,
+            navOpacityPct = 80
+        )
+        val settings = AppSettings(
+            customColorSchemes = listOf(scheme),
+            activeCustomSchemeId = "custom-1"
+        )
+
+        assertEquals(scheme, settings.activeCustomScheme())
+        val cloned = settings.starterSchemeFromCurrent("custom-2", "Clone")
+        assertEquals("custom-2", cloned.id)
+        assertEquals("Clone", cloned.name)
+        assertEquals("#1E3A5F", cloned.primaryHex)
+        assertEquals(82, cloned.cardOpacityPct)
+
+        val inactive = settings.copy(activeCustomSchemeId = "")
+        assertNull(inactive.activeCustomScheme())
+    }
 }

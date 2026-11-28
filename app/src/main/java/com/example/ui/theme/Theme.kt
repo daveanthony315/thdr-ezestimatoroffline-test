@@ -16,6 +16,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.example.model.AppSettings
 import com.example.model.AppThemePreset
+import com.example.model.ColorHexCodec
+import com.example.model.CustomColorScheme
 
 @Immutable
 data class ThdrPalette(
@@ -44,10 +46,126 @@ data class ThdrPalette(
     val onAccentContainer: Color,
     val backdropGradient: List<Color>,
     val headerGradient: List<Color>,
-    val cardGradient: List<Color>
+    val cardGradient: List<Color>,
+    val navBarAlpha: Float = 0.85f,
+    val subCardAlpha: Float = 0.82f
 )
 
+private fun customSchemePalette(scheme: CustomColorScheme): ThdrPalette {
+    val primaryHex = ColorHexCodec.normalizeHex(scheme.primaryHex, "#2F5D8A")
+    val secondaryHex = ColorHexCodec.normalizeHex(scheme.secondaryHex, "#5E8FB9")
+    val accentHex = ColorHexCodec.normalizeHex(scheme.accentHex, "#F5832B")
+    val bgHex = ColorHexCodec.normalizeHex(scheme.backgroundHex, if (scheme.isDark) "#1B334D" else "#E6E7EA")
+    val surfaceHex = ColorHexCodec.normalizeHex(scheme.surfaceHex, if (scheme.isDark) "#233F5E" else "#FFFFFF")
+    val textPrimaryHex = ColorHexCodec.normalizeHex(scheme.textPrimaryHex, if (scheme.isDark) "#FFFFFF" else "#1D2B3A")
+    val textMutedHex = ColorHexCodec.normalizeHex(scheme.textMutedHex, if (scheme.isDark) "#CDE3F5" else "#4A4A4A")
+    val outlineHex = ColorHexCodec.normalizeHex(scheme.outlineHex, secondaryHex)
+
+    val primary = Color(ColorHexCodec.parseArgbLong(primaryHex, 0xFF2F5D8AL))
+    val primaryDeepHex = ColorHexCodec.darkenHex(primaryHex, 0.28f)
+    val primaryDeep = Color(ColorHexCodec.parseArgbLong(primaryDeepHex, 0xFF22466AL))
+    val secondary = Color(ColorHexCodec.parseArgbLong(secondaryHex, 0xFF5E8FB9L))
+    val accent = Color(ColorHexCodec.parseArgbLong(accentHex, 0xFFF5832BL))
+    val accentSecondary = Color(
+        ColorHexCodec.parseArgbLong(
+            ColorHexCodec.lightenHex(accentHex, 0.25f),
+            0xFFE8A460L
+        )
+    )
+    val bg = Color(ColorHexCodec.parseArgbLong(bgHex, 0xFFE6E7EAL))
+    val surface = Color(ColorHexCodec.parseArgbLong(surfaceHex, 0xFFFFFFFFL))
+    val surfaceVariantHex = ColorHexCodec.blendHex(surfaceHex, bgHex, 0.38f)
+    val surfaceVariant = Color(ColorHexCodec.parseArgbLong(surfaceVariantHex, 0xFFF1F5FAL))
+    val surfaceHighHex = if (scheme.isDark) {
+        ColorHexCodec.blendHex(surfaceHex, secondaryHex, 0.26f)
+    } else {
+        ColorHexCodec.blendHex(surfaceHex, secondaryHex, 0.24f)
+    }
+    val surfaceHigh = Color(ColorHexCodec.parseArgbLong(surfaceHighHex, 0xFFCDE3F5L))
+    val textPrimary = Color(ColorHexCodec.parseArgbLong(textPrimaryHex, 0xFF1D2B3AL))
+    val textMuted = Color(ColorHexCodec.parseArgbLong(textMutedHex, 0xFF4A4A4AL))
+    val outlineColor = Color(ColorHexCodec.parseArgbLong(outlineHex, 0xFF5E8FB9L))
+
+    val brandHighlight = if (scheme.isDark) {
+        if (ColorHexCodec.relativeLuminance(secondaryHex) < 0.35f) {
+            Color(ColorHexCodec.parseArgbLong(ColorHexCodec.lightenHex(secondaryHex, 0.45f), 0xFFCDE3F5L))
+        } else {
+            secondary
+        }
+    } else {
+        if (ColorHexCodec.relativeLuminance(primaryHex) > 0.65f) {
+            primaryDeep
+        } else {
+            primary
+        }
+    }
+
+    val headerIsLight = ColorHexCodec.relativeLuminance(primaryHex) > 0.68f
+    val headerText = if (headerIsLight) SlateInk else CleanWhite
+    val headerMuted = if (headerIsLight) Charcoal else Color(
+        ColorHexCodec.parseArgbLong(ColorHexCodec.lightenHex(secondaryHex, 0.52f), 0xFFCDE3F5L)
+    )
+
+    val cardAlpha = (scheme.cardOpacityPct.coerceIn(55, 100) / 100f)
+    val navAlpha = (scheme.navOpacityPct.coerceIn(55, 100) / 100f)
+    val subAlpha = (cardAlpha - 0.04f).coerceIn(0.50f, 0.96f)
+
+    return ThdrPalette(
+        isDark = scheme.isDark,
+        bg = bg,
+        surface = surface,
+        surfaceVariant = surfaceVariant,
+        surfaceHigh = surfaceHigh,
+        primary = primary,
+        primaryDeep = primaryDeep,
+        accent = accent,
+        accentSecondary = accentSecondary,
+        brandHighlight = brandHighlight,
+        textPrimary = textPrimary,
+        textMuted = textMuted,
+        outline = outlineColor.copy(alpha = 0.56f),
+        outlineSubtle = outlineColor.copy(alpha = 0.30f),
+        danger = if (scheme.isDark) Color(0xFFE0635F) else Color(0xFFC23B36),
+        dangerBg = if (scheme.isDark) Color(0xFF4D2124) else Color(0xFFFCEAEA),
+        warning = if (scheme.isDark) WarmYellow else Color(0xFF9E5A14),
+        warningContainer = if (scheme.isDark) AccentOrangeContainer.copy(alpha = 0.72f) else WarmYellow.copy(alpha = 0.35f),
+        success = if (scheme.isDark) SageGreen else Color(0xFF5A7744),
+        woodAccent = WoodBrown,
+        headerText = headerText,
+        headerMuted = headerMuted,
+        onAccentContainer = CleanWhite,
+        backdropGradient = if (scheme.isDark) {
+            listOf(
+                bg.copy(alpha = 0.58f),
+                primaryDeep.copy(alpha = 0.64f),
+                secondary.copy(alpha = 0.20f)
+            )
+        } else {
+            listOf(
+                primary.copy(alpha = 0.16f),
+                secondary.copy(alpha = 0.28f),
+                bg.copy(alpha = 0.64f)
+            )
+        },
+        headerGradient = listOf(
+            primaryDeep.copy(alpha = (navAlpha + 0.05f).coerceAtMost(0.96f)),
+            primary.copy(alpha = (navAlpha + 0.05f).coerceAtMost(0.96f)),
+            secondary.copy(alpha = navAlpha)
+        ),
+        cardGradient = listOf(
+            surface.copy(alpha = cardAlpha),
+            surfaceVariant.copy(alpha = (cardAlpha - 0.02f).coerceAtLeast(0.50f)),
+            secondary.copy(alpha = if (scheme.isDark) 0.18f else 0.28f)
+        ),
+        navBarAlpha = navAlpha,
+        subCardAlpha = subAlpha
+    )
+}
+
 fun paletteFor(settings: AppSettings): ThdrPalette {
+    settings.activeCustomScheme()?.let { custom ->
+        return customSchemePalette(custom)
+    }
     val accent = Color(settings.accentColor.primaryArgb)
     val accentSec = Color(settings.accentColor.secondaryArgb)
     return when (settings.themePreset) {
@@ -256,7 +374,12 @@ fun ThdrTheme(
     settings: AppSettings = AppSettings(),
     content: @Composable () -> Unit
 ) {
-    val palette = remember(settings.themePreset, settings.accentColor) { paletteFor(settings) }
+    val palette = remember(
+        settings.themePreset,
+        settings.accentColor,
+        settings.activeCustomSchemeId,
+        settings.customColorSchemes
+    ) { paletteFor(settings) }
     val typography = remember(settings.largeFieldText) { appTypographyFor(settings.largeFieldText) }
     val colorScheme = remember(palette) {
         if (palette.isDark) {

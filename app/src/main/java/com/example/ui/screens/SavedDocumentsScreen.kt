@@ -20,6 +20,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,7 +68,9 @@ fun SavedDocumentsScreen(
     viewModel: EstimatorViewModel,
     onCreateNew: () -> Unit,
     onOpenDocument: (SavedProposal) -> Unit,
-    onConvertedToProposal: () -> Unit
+    onConvertedToProposal: () -> Unit,
+    onBack: () -> Unit = {},
+    onGoHome: () -> Unit = {}
 ) {
     val palette = LocalThdrPalette.current
     val context = LocalContext.current
@@ -103,6 +110,18 @@ fun SavedDocumentsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (docType == DocumentType.ESTIMATE) {
+                            IconButton(
+                                onClick = onBack,
+                                modifier = Modifier.testTag("saved_docs_back_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = palette.textPrimary
+                                )
+                            }
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Saved ${docType.pluralTitle}",
@@ -117,6 +136,16 @@ fun SavedDocumentsScreen(
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = palette.textMuted
+                            )
+                        }
+                        IconButton(
+                            onClick = onGoHome,
+                            modifier = Modifier.testTag("saved_docs_home_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Go to Home",
+                                tint = palette.brandHighlight
                             )
                         }
                     }

@@ -176,6 +176,16 @@ enum class PdfColorTheme(
         softGrayHex = "#E6E7EA",
         accentHex = "#F5832B"
     ),
+    MATCH_ACTIVE_THEME(
+        key = "match_active_theme",
+        label = "Match Active App Theme",
+        primaryHex = "#2F5D8A",
+        deepHex = "#22466A",
+        steelHex = "#5E8FB9",
+        skyHex = "#CDE3F5",
+        softGrayHex = "#E6E7EA",
+        accentHex = "#F5832B"
+    ),
     MATCH_APP_ACCENT(
         key = "match_app_accent",
         label = "Match App Accent",
@@ -247,6 +257,89 @@ enum class PdfLogoMode(val key: String, val label: String) {
     }
 }
 
+data class CustomColorScheme(
+    val id: String,
+    val name: String,
+    val isDark: Boolean = false,
+    val primaryHex: String = "#2F5D8A",
+    val secondaryHex: String = "#5E8FB9",
+    val accentHex: String = "#F5832B",
+    val backgroundHex: String = "#E6E7EA",
+    val surfaceHex: String = "#FFFFFF",
+    val textPrimaryHex: String = "#1D2B3A",
+    val textMutedHex: String = "#4A4A4A",
+    val outlineHex: String = "#5E8FB9",
+    val cardOpacityPct: Int = 86,
+    val navOpacityPct: Int = 85
+)
+
+object ColorHexCodec {
+    fun isValidHex(raw: String): Boolean {
+        val clean = raw.trim().removePrefix("#")
+        return (clean.length == 6 || clean.length == 3) && clean.all {
+            it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F'
+        }
+    }
+
+    fun normalizeHex(raw: String, fallback: String): String {
+        val clean = raw.trim().removePrefix("#").uppercase()
+        val expanded = when {
+            clean.length == 3 && clean.all { it in '0'..'9' || it in 'A'..'F' } ->
+                "${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}"
+            clean.length == 6 && clean.all { it in '0'..'9' || it in 'A'..'F' } ->
+                clean
+            else -> return fallback.uppercase()
+        }
+        return "#$expanded"
+    }
+
+    fun parseArgbLong(hex: String, fallbackArgb: Long): Long {
+        val norm = normalizeHex(hex, "")
+        if (norm.length != 7) return fallbackArgb
+        val rgb = norm.substring(1).toLongOrNull(16) ?: return fallbackArgb
+        return 0xFF000000L or rgb
+    }
+
+    fun argbLongToHex(argb: Long): String {
+        val r = ((argb shr 16) and 0xFFL).toInt()
+        val g = ((argb shr 8) and 0xFFL).toInt()
+        val b = (argb and 0xFFL).toInt()
+        return "#" +
+            r.toString(16).padStart(2, '0').uppercase() +
+            g.toString(16).padStart(2, '0').uppercase() +
+            b.toString(16).padStart(2, '0').uppercase()
+    }
+
+    fun blendHex(hexA: String, hexB: String, ratioB: Float): String {
+        val t = ratioB.coerceIn(0f, 1f)
+        val a = parseArgbLong(hexA, 0xFF2F5D8AL)
+        val b = parseArgbLong(hexB, 0xFFFFFFFFL)
+        val ar = ((a shr 16) and 0xFF).toFloat()
+        val ag = ((a shr 8) and 0xFF).toFloat()
+        val ab = (a and 0xFF).toFloat()
+        val br = ((b shr 16) and 0xFF).toFloat()
+        val bg = ((b shr 8) and 0xFF).toFloat()
+        val bb = (b and 0xFF).toFloat()
+        val r = (ar + (br - ar) * t).toInt().coerceIn(0, 255)
+        val g = (ag + (bg - ag) * t).toInt().coerceIn(0, 255)
+        val bl = (ab + (bb - ab) * t).toInt().coerceIn(0, 255)
+        val combined = 0xFF000000L or (r.toLong() shl 16) or (g.toLong() shl 8) or bl.toLong()
+        return argbLongToHex(combined)
+    }
+
+    fun darkenHex(hex: String, amount: Float): String = blendHex(hex, "#000000", amount)
+
+    fun lightenHex(hex: String, amount: Float): String = blendHex(hex, "#FFFFFF", amount)
+
+    fun relativeLuminance(hex: String): Float {
+        val argb = parseArgbLong(hex, 0xFF000000L)
+        val r = ((argb shr 16) and 0xFF) / 255f
+        val g = ((argb shr 8) and 0xFF) / 255f
+        val b = (argb and 0xFF) / 255f
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b
+    }
+}
+
 data class AppSettings(
     val companyName: String = "EZ ESTIMATOR",
     val companyTagline: String = "HOUSE DR · INTERIOR / EXTERIOR",
@@ -256,6 +349,8 @@ data class AppSettings(
     val companyLicense: String = "",
     val themePreset: AppThemePreset = AppThemePreset.HOUSE_DR_STUDIO,
     val accentColor: AppAccentColor = AppAccentColor.COPPER_ORANGE,
+    val customColorSchemes: List<CustomColorScheme> = emptyList(),
+    val activeCustomSchemeId: String = "",
     val showBlueprintBackdrop: Boolean = true,
     val largeFieldText: Boolean = false,
     val showInternalCostProfit: Boolean = true,
@@ -310,4 +405,78 @@ data class AppSettings(
     val includeSignatureBlockOnEstimate: Boolean = true,
     val pdfContractorSignatureLabel: String = "Contractor",
     val pdfClientSignatureLabel: String = "Client"
-)
+) {
+    fun activeCustomScheme(): CustomColorScheme? =
+        if (activeCustomSchemeId.isBlank()) null
+        else customColorSchemes.firstOrNull { it.id == activeCustomSchemeId }
+
+    fun starterSchemeFromCurrent(newId: String, name: String): CustomColorScheme {
+        activeCustomScheme()?.let { active ->
+            return active.copy(id = newId, name = name)
+        }
+        val accentHex = ColorHexCodec.argbLongToHex(accentColor.primaryArgb)
+        val accentSecHex = ColorHexCodec.argbLongToHex(accentColor.secondaryArgb)
+        return when (themePreset) {
+            AppThemePreset.HOUSE_DR_STUDIO -> CustomColorScheme(
+                id = newId,
+                name = name,
+                isDark = false,
+                primaryHex = "#2F5D8A",
+                secondaryHex = "#5E8FB9",
+                accentHex = accentHex,
+                backgroundHex = "#E6E7EA",
+                surfaceHex = "#FFFFFF",
+                textPrimaryHex = "#1D2B3A",
+                textMutedHex = "#4A4A4A",
+                outlineHex = "#5E8FB9",
+                cardOpacityPct = 86,
+                navOpacityPct = 85
+            )
+            AppThemePreset.BLUEPRINT_NAVY -> CustomColorScheme(
+                id = newId,
+                name = name,
+                isDark = true,
+                primaryHex = "#2F5D8A",
+                secondaryHex = "#5E8FB9",
+                accentHex = accentHex,
+                backgroundHex = "#1B334D",
+                surfaceHex = "#233F5E",
+                textPrimaryHex = "#FFFFFF",
+                textMutedHex = "#CDE3F5",
+                outlineHex = "#5E8FB9",
+                cardOpacityPct = 85,
+                navOpacityPct = 85
+            )
+            AppThemePreset.MIDNIGHT_SLATE -> CustomColorScheme(
+                id = newId,
+                name = name,
+                isDark = true,
+                primaryHex = "#2F5D8A",
+                secondaryHex = accentSecHex,
+                accentHex = accentHex,
+                backgroundHex = "#1D2229",
+                surfaceHex = "#282F38",
+                textPrimaryHex = "#FFFFFF",
+                textMutedHex = "#C5CCD6",
+                outlineHex = "#5E8FB9",
+                cardOpacityPct = 85,
+                navOpacityPct = 85
+            )
+            AppThemePreset.WORKSHOP_PINE -> CustomColorScheme(
+                id = newId,
+                name = name,
+                isDark = true,
+                primaryHex = "#5D7A4A",
+                secondaryHex = "#8FAA77",
+                accentHex = accentHex,
+                backgroundHex = "#1A2420",
+                surfaceHex = "#24332C",
+                textPrimaryHex = "#FFFFFF",
+                textMutedHex = "#D2DEC8",
+                outlineHex = "#8FAA77",
+                cardOpacityPct = 85,
+                navOpacityPct = 85
+            )
+        }
+    }
+}

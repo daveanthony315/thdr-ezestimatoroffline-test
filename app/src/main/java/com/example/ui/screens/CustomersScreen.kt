@@ -17,9 +17,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,7 +61,9 @@ fun CustomersScreen(
     state: EstimatorUiState,
     viewModel: EstimatorViewModel,
     onStartEstimateForCustomer: (Customer) -> Unit,
-    onStartProposalForCustomer: (Customer) -> Unit
+    onStartProposalForCustomer: (Customer) -> Unit,
+    onBack: () -> Unit = {},
+    onGoHome: () -> Unit = {}
 ) {
     val palette = LocalThdrPalette.current
     val currency = state.settings.currencySymbol
@@ -87,11 +94,38 @@ fun CustomersScreen(
         item {
             Box(modifier = Modifier.widthIn(max = 980.dp)) {
                 ThdrCard {
-                    Text(
-                        text = "Customers",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = palette.textPrimary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("customers_back_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = palette.textPrimary
+                            )
+                        }
+                        Text(
+                            text = "Customers",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = palette.textPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = onGoHome,
+                            modifier = Modifier.testTag("customers_home_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Go to Home",
+                                tint = palette.brandHighlight
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Save homeowner and commercial client profiles for one-tap Estimate and Proposal creation.",

@@ -149,9 +149,38 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
         }
     }
 
+    val subScreenRoutes = remember {
+        setOf(
+            AppRoutes.ROUTE_SETTINGS,
+            AppRoutes.ROUTE_CUSTOMERS,
+            AppRoutes.ROUTE_PRIVACY_POLICY,
+            AppRoutes.ROUTE_SAVED_ESTIMATES
+        )
+    }
+
+    fun goHome() {
+        val popped = navController.popBackStack(AppRoutes.ROUTE_HOME, inclusive = false)
+        if (!popped) {
+            navController.navigate(AppRoutes.ROUTE_HOME) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = false
+                }
+                launchSingleTop = true
+            }
+        }
+    }
+
     fun navigateTopLevel(route: String) {
+        if (route == AppRoutes.ROUTE_HOME) {
+            goHome()
+            return
+        }
+        while (navController.currentDestination?.route in subScreenRoutes) {
+            if (!navController.popBackStack()) break
+        }
+        if (navController.currentDestination?.route == route) return
         navController.navigate(route) {
-            popUpTo(navController.graph.findStartDestination().id) {
+            popUpTo(AppRoutes.ROUTE_HOME) {
                 saveState = true
             }
             launchSingleTop = true
@@ -160,8 +189,11 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
     }
 
     fun navigateSubScreen(route: String) {
-        navController.navigate(route) {
-            launchSingleTop = true
+        if (navController.currentDestination?.route == route) return
+        if (!navController.popBackStack(route, inclusive = false)) {
+            navController.navigate(route) {
+                launchSingleTop = true
+            }
         }
     }
 
@@ -186,10 +218,9 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                         companyTagline = state.settings.companyTagline,
                         headerEmblemChoice = state.settings.headerEmblemChoice,
                         customHeaderEmblemPath = state.settings.customHeaderEmblemPath,
-                        onLogoClick = { navigateTopLevel(AppRoutes.ROUTE_HOME) },
+                        onLogoClick = { goHome() },
                         onOpenCustomers = { navigateSubScreen(AppRoutes.ROUTE_CUSTOMERS) },
-                        onOpenSettings = { navigateSubScreen(AppRoutes.ROUTE_SETTINGS) },
-                        modifier = Modifier.windowInsetsPadding(WindowInsets(0))
+                        onOpenSettings = { navigateSubScreen(AppRoutes.ROUTE_SETTINGS) }
                     )
                 },
                 bottomBar = {
@@ -197,7 +228,7 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                         Column {
                             HorizontalDivider(thickness = 1.dp, color = palette.outlineSubtle)
                             NavigationBar(
-                                containerColor = palette.surface.copy(alpha = 0.85f),
+                                containerColor = palette.surface.copy(alpha = palette.navBarAlpha),
                                 contentColor = palette.textPrimary
                             ) {
                                 TopDestination.entries.forEach { dest ->
@@ -242,7 +273,7 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                 ) {
                     if (useRail) {
                         NavigationRail(
-                            containerColor = palette.surface.copy(alpha = 0.85f),
+                            containerColor = palette.surface.copy(alpha = palette.navBarAlpha),
                             contentColor = palette.textPrimary,
                             modifier = Modifier.fillMaxHeight()
                         ) {
@@ -346,7 +377,11 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     },
                                     onConvertedToProposal = {
                                         navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
-                                    }
+                                    },
+                                    onBack = {
+                                        if (!navController.popBackStack()) goHome()
+                                    },
+                                    onGoHome = { goHome() }
                                 )
                             }
                             composable(AppRoutes.ROUTE_PROPOSALS) {
@@ -364,7 +399,11 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     },
                                     onConvertedToProposal = {
                                         navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
-                                    }
+                                    },
+                                    onBack = {
+                                        if (!navController.popBackStack()) goHome()
+                                    },
+                                    onGoHome = { goHome() }
                                 )
                             }
                             composable(AppRoutes.ROUTE_CUSTOMERS) {
@@ -378,7 +417,11 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     onStartProposalForCustomer = { customer ->
                                         viewModel.createNewProposal(customer)
                                         navigateTopLevel(AppRoutes.ROUTE_ESTIMATE)
-                                    }
+                                    },
+                                    onBack = {
+                                        if (!navController.popBackStack()) goHome()
+                                    },
+                                    onGoHome = { goHome() }
                                 )
                             }
                             composable(AppRoutes.ROUTE_PRICEBOOK) {
@@ -407,13 +450,20 @@ fun ThdrEstimatorApp(viewModel: EstimatorViewModel) {
                                     viewModel = viewModel,
                                     onOpenPrivacyPolicy = {
                                         navigateSubScreen(AppRoutes.ROUTE_PRIVACY_POLICY)
-                                    }
+                                    },
+                                    onBack = {
+                                        if (!navController.popBackStack()) goHome()
+                                    },
+                                    onGoHome = { goHome() }
                                 )
                             }
                             composable(AppRoutes.ROUTE_PRIVACY_POLICY) {
                                 PrivacyPolicyScreen(
                                     settings = state.settings,
-                                    onBack = { navController.popBackStack() }
+                                    onBack = {
+                                        if (!navController.popBackStack()) goHome()
+                                    },
+                                    onGoHome = { goHome() }
                                 )
                             }
                         }

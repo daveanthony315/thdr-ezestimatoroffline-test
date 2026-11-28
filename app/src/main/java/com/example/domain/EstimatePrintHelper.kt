@@ -29,6 +29,42 @@ object EstimatePrintHelper {
 
     internal fun resolvePdfPalette(settings: AppSettings): ResolvedPdfPalette {
         val base = settings.pdfColorTheme
+        val customScheme = settings.activeCustomScheme()
+        if (customScheme != null &&
+            (base == PdfColorTheme.MATCH_ACTIVE_THEME || base == PdfColorTheme.MATCH_APP_ACCENT)
+        ) {
+            val primaryHex = com.example.model.ColorHexCodec.normalizeHex(customScheme.primaryHex, "#2F5D8A")
+            val deepHex = com.example.model.ColorHexCodec.darkenHex(primaryHex, 0.25f)
+            val steelHex = com.example.model.ColorHexCodec.normalizeHex(customScheme.secondaryHex, "#5E8FB9")
+            val skyHex = com.example.model.ColorHexCodec.lightenHex(steelHex, 0.72f)
+            val softGrayHex = if (customScheme.isDark) "#E6E7EA" else {
+                com.example.model.ColorHexCodec.normalizeHex(customScheme.backgroundHex, "#E6E7EA")
+            }
+            val accentHex = com.example.model.ColorHexCodec.normalizeHex(customScheme.accentHex, "#F5832B")
+            return ResolvedPdfPalette(
+                primaryHex = primaryHex,
+                deepHex = deepHex,
+                steelHex = steelHex,
+                skyHex = skyHex,
+                softGrayHex = softGrayHex,
+                accentHex = accentHex
+            )
+        }
+        if (base == PdfColorTheme.MATCH_ACTIVE_THEME) {
+            val accentHex = String.format(Locale.US, "#%06X", (settings.accentColor.primaryArgb and 0xFFFFFFL))
+            val starter = settings.starterSchemeFromCurrent("pdf_preview", "PDF")
+            val primaryHex = com.example.model.ColorHexCodec.normalizeHex(starter.primaryHex, "#2F5D8A")
+            val deepHex = com.example.model.ColorHexCodec.darkenHex(primaryHex, 0.25f)
+            val steelHex = com.example.model.ColorHexCodec.normalizeHex(starter.secondaryHex, "#5E8FB9")
+            return ResolvedPdfPalette(
+                primaryHex = primaryHex,
+                deepHex = deepHex,
+                steelHex = steelHex,
+                skyHex = com.example.model.ColorHexCodec.lightenHex(steelHex, 0.72f),
+                softGrayHex = "#E6E7EA",
+                accentHex = accentHex
+            )
+        }
         val accentHex = if (base == PdfColorTheme.MATCH_APP_ACCENT) {
             String.format(Locale.US, "#%06X", (settings.accentColor.primaryArgb and 0xFFFFFFL))
         } else {

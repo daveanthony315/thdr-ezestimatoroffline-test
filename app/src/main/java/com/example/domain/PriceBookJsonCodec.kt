@@ -344,6 +344,12 @@ object PriceBookJsonCodec {
             put("companyLicense", settings.companyLicense)
             put("themePreset", settings.themePreset.key)
             put("accentColor", settings.accentColor.key)
+            put("activeCustomSchemeId", settings.activeCustomSchemeId)
+            put("customColorSchemes", JSONArray().apply {
+                settings.customColorSchemes.forEach { scheme ->
+                    put(encodeCustomColorScheme(scheme))
+                }
+            })
             put("showBlueprintBackdrop", settings.showBlueprintBackdrop)
             put("largeFieldText", settings.largeFieldText)
             put("showInternalCostProfit", settings.showInternalCostProfit)
@@ -412,6 +418,8 @@ object PriceBookJsonCodec {
             companyLicense = root.optString("companyLicense", defaults.companyLicense),
             themePreset = com.example.model.AppThemePreset.fromKey(root.optString("themePreset", defaults.themePreset.key)),
             accentColor = com.example.model.AppAccentColor.fromKey(root.optString("accentColor", defaults.accentColor.key)),
+            customColorSchemes = decodeCustomColorSchemes(root.optJSONArray("customColorSchemes")),
+            activeCustomSchemeId = root.optString("activeCustomSchemeId", defaults.activeCustomSchemeId),
             showBlueprintBackdrop = root.optBoolean("showBlueprintBackdrop", defaults.showBlueprintBackdrop),
             largeFieldText = root.optBoolean("largeFieldText", defaults.largeFieldText),
             showInternalCostProfit = root.optBoolean("showInternalCostProfit", defaults.showInternalCostProfit),
@@ -465,6 +473,73 @@ object PriceBookJsonCodec {
             pdfContractorSignatureLabel = root.optString("pdfContractorSignatureLabel", defaults.pdfContractorSignatureLabel),
             pdfClientSignatureLabel = root.optString("pdfClientSignatureLabel", defaults.pdfClientSignatureLabel)
         )
+    }
+
+    fun encodeCustomColorScheme(scheme: com.example.model.CustomColorScheme): JSONObject =
+        JSONObject().apply {
+            put("id", scheme.id)
+            put("name", scheme.name)
+            put("isDark", scheme.isDark)
+            put("primaryHex", com.example.model.ColorHexCodec.normalizeHex(scheme.primaryHex, "#2F5D8A"))
+            put("secondaryHex", com.example.model.ColorHexCodec.normalizeHex(scheme.secondaryHex, "#5E8FB9"))
+            put("accentHex", com.example.model.ColorHexCodec.normalizeHex(scheme.accentHex, "#F5832B"))
+            put("backgroundHex", com.example.model.ColorHexCodec.normalizeHex(scheme.backgroundHex, if (scheme.isDark) "#1B334D" else "#E6E7EA"))
+            put("surfaceHex", com.example.model.ColorHexCodec.normalizeHex(scheme.surfaceHex, if (scheme.isDark) "#233F5E" else "#FFFFFF"))
+            put("textPrimaryHex", com.example.model.ColorHexCodec.normalizeHex(scheme.textPrimaryHex, if (scheme.isDark) "#FFFFFF" else "#1D2B3A"))
+            put("textMutedHex", com.example.model.ColorHexCodec.normalizeHex(scheme.textMutedHex, if (scheme.isDark) "#CDE3F5" else "#4A4A4A"))
+            put("outlineHex", com.example.model.ColorHexCodec.normalizeHex(scheme.outlineHex, "#5E8FB9"))
+            put("cardOpacityPct", scheme.cardOpacityPct.coerceIn(55, 100))
+            put("navOpacityPct", scheme.navOpacityPct.coerceIn(55, 100))
+        }
+
+    fun decodeCustomColorScheme(
+        obj: JSONObject,
+        fallbackId: String = "scheme_${System.currentTimeMillis()}"
+    ): com.example.model.CustomColorScheme {
+        val isDark = obj.optBoolean("isDark", false)
+        val rawId = obj.optString("id", "").trim()
+        val rawName = obj.optString("name", "").trim().ifBlank { "Custom Scheme" }
+        return com.example.model.CustomColorScheme(
+            id = rawId.ifBlank { fallbackId },
+            name = rawName,
+            isDark = isDark,
+            primaryHex = com.example.model.ColorHexCodec.normalizeHex(obj.optString("primaryHex", ""), "#2F5D8A"),
+            secondaryHex = com.example.model.ColorHexCodec.normalizeHex(obj.optString("secondaryHex", ""), "#5E8FB9"),
+            accentHex = com.example.model.ColorHexCodec.normalizeHex(obj.optString("accentHex", ""), "#F5832B"),
+            backgroundHex = com.example.model.ColorHexCodec.normalizeHex(
+                obj.optString("backgroundHex", ""),
+                if (isDark) "#1B334D" else "#E6E7EA"
+            ),
+            surfaceHex = com.example.model.ColorHexCodec.normalizeHex(
+                obj.optString("surfaceHex", ""),
+                if (isDark) "#233F5E" else "#FFFFFF"
+            ),
+            textPrimaryHex = com.example.model.ColorHexCodec.normalizeHex(
+                obj.optString("textPrimaryHex", ""),
+                if (isDark) "#FFFFFF" else "#1D2B3A"
+            ),
+            textMutedHex = com.example.model.ColorHexCodec.normalizeHex(
+                obj.optString("textMutedHex", ""),
+                if (isDark) "#CDE3F5" else "#4A4A4A"
+            ),
+            outlineHex = com.example.model.ColorHexCodec.normalizeHex(obj.optString("outlineHex", ""), "#5E8FB9"),
+            cardOpacityPct = obj.optInt("cardOpacityPct", 86).coerceIn(55, 100),
+            navOpacityPct = obj.optInt("navOpacityPct", 85).coerceIn(55, 100)
+        )
+    }
+
+    private fun decodeCustomColorSchemes(array: JSONArray?): List<com.example.model.CustomColorScheme> {
+        if (array == null) return emptyList()
+        val list = mutableListOf<com.example.model.CustomColorScheme>()
+        val seenIds = mutableSetOf<String>()
+        for (i in 0 until array.length()) {
+            val obj = array.optJSONObject(i) ?: continue
+            val scheme = decodeCustomColorScheme(obj, fallbackId = "scheme_${i + 1}")
+            if (seenIds.add(scheme.id)) {
+                list.add(scheme)
+            }
+        }
+        return list
     }
 
     private fun Double.finiteOrZero(): Double = if (this.isFinite()) this else 0.0

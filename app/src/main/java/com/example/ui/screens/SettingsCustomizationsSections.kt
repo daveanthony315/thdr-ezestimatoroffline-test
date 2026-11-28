@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -46,6 +48,7 @@ import com.example.domain.EstimatePrintHelper
 import com.example.model.AppSettings
 import com.example.model.BrandLogoChoice
 import com.example.model.BrandingSlot
+import com.example.model.ColorHexCodec
 import com.example.model.HeaderEmblemChoice
 import com.example.model.HeroBackdropChoice
 import com.example.model.HeroMascotPosition
@@ -59,6 +62,7 @@ import com.example.ui.components.ThdrSecondaryButton
 import com.example.ui.components.ThdrSubCard
 import com.example.ui.components.ThdrTextField
 import com.example.ui.theme.LocalThdrPalette
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -277,16 +281,27 @@ fun SettingsImagesAndLogosSection(
 
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            text = "Backdrop Texture Opacity",
+            text = "Backdrop Texture Opacity (${draft.backdropOpacityPct}%)",
             style = MaterialTheme.typography.labelLarge,
             color = palette.textMuted
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Slider(
+            value = draft.backdropOpacityPct.toFloat(),
+            onValueChange = { value ->
+                onUpdateDraft { it.copy(backdropOpacityPct = value.roundToInt().coerceIn(5, 45)) }
+            },
+            valueRange = 5f..45f,
+            colors = SliderDefaults.colors(
+                thumbColor = palette.accent,
+                activeTrackColor = palette.primary
+            ),
+            modifier = Modifier.testTag("settings_backdrop_opacity_slider")
+        )
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf(10, 18, 26, 35).forEach { pct ->
+            listOf(10, 18, 26, 35, 45).forEach { pct ->
                 SelectablePill(
                     text = "$pct%",
                     selected = draft.backdropOpacityPct == pct,
@@ -345,10 +360,22 @@ fun SettingsPdfCustomizationSection(
         ) {
             PdfColorTheme.entries.forEach { pdfTheme ->
                 val selected = draft.pdfColorTheme == pdfTheme
-                val swatchColor = if (pdfTheme == PdfColorTheme.MATCH_APP_ACCENT) {
-                    Color(draft.accentColor.primaryArgb)
-                } else {
-                    Color(android.graphics.Color.parseColor(pdfTheme.primaryHex))
+                val swatchColor = when (pdfTheme) {
+                    PdfColorTheme.MATCH_ACTIVE_THEME -> {
+                        val resolved = EstimatePrintHelper.resolvePdfPalette(
+                            draft.copy(pdfColorTheme = PdfColorTheme.MATCH_ACTIVE_THEME)
+                        )
+                        Color(ColorHexCodec.parseArgbLong(resolved.primaryHex, 0xFF2F5D8AL))
+                    }
+                    PdfColorTheme.MATCH_APP_ACCENT -> {
+                        val customAccent = draft.activeCustomScheme()?.accentHex
+                        if (!customAccent.isNullOrBlank()) {
+                            Color(ColorHexCodec.parseArgbLong(customAccent, draft.accentColor.primaryArgb))
+                        } else {
+                            Color(draft.accentColor.primaryArgb)
+                        }
+                    }
+                    else -> Color(ColorHexCodec.parseArgbLong(pdfTheme.primaryHex, 0xFF2F5D8AL))
                 }
                 Surface(
                     shape = RoundedCornerShape(99.dp),
@@ -782,12 +809,12 @@ private fun PrePositionedLayoutPreview(draft: AppSettings) {
 @Composable
 private fun PdfLayoutMiniPreview(draft: AppSettings) {
     val pdfColors = EstimatePrintHelper.resolvePdfPalette(draft)
-    val primary = Color(android.graphics.Color.parseColor(pdfColors.primaryHex))
-    val deep = Color(android.graphics.Color.parseColor(pdfColors.deepHex))
-    val steel = Color(android.graphics.Color.parseColor(pdfColors.steelHex))
-    val sky = Color(android.graphics.Color.parseColor(pdfColors.skyHex))
-    val softGray = Color(android.graphics.Color.parseColor(pdfColors.softGrayHex))
-    val accent = Color(android.graphics.Color.parseColor(pdfColors.accentHex))
+    val primary = Color(ColorHexCodec.parseArgbLong(pdfColors.primaryHex, 0xFF2F5D8AL))
+    val deep = Color(ColorHexCodec.parseArgbLong(pdfColors.deepHex, 0xFF22466AL))
+    val steel = Color(ColorHexCodec.parseArgbLong(pdfColors.steelHex, 0xFF5E8FB9L))
+    val sky = Color(ColorHexCodec.parseArgbLong(pdfColors.skyHex, 0xFFCDE3F5L))
+    val softGray = Color(ColorHexCodec.parseArgbLong(pdfColors.softGrayHex, 0xFFE6E7EAL))
+    val accent = Color(ColorHexCodec.parseArgbLong(pdfColors.accentHex, 0xFFF5832BL))
 
     Column(
         modifier = Modifier

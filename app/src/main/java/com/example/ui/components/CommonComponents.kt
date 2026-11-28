@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -175,6 +176,7 @@ fun ThdrHeaderBar(
                 .fillMaxWidth()
                 .background(Brush.horizontalGradient(colors = palette.headerGradient))
                 .border(width = 0.5.dp, color = palette.outline)
+                .statusBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -183,12 +185,14 @@ fun ThdrHeaderBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .weight(1f)
+                    .defaultMinSize(minHeight = 48.dp)
                     .then(
                         if (onLogoClick != null) {
                             Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable(onClick = onLogoClick)
-                                .padding(end = 6.dp)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .testTag("header_home_btn")
                         } else Modifier
                     )
             ) {
@@ -324,7 +328,7 @@ fun ThdrSubCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(palette.surfaceVariant.copy(alpha = 0.82f))
+            .background(palette.surfaceVariant.copy(alpha = palette.subCardAlpha))
             .border(1.dp, palette.outlineSubtle, RoundedCornerShape(14.dp))
             .padding(contentPadding)
     ) {

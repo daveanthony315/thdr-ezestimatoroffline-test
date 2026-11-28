@@ -5,6 +5,7 @@ import android.util.Base64
 import com.example.model.AppSettings
 import com.example.model.BrandLogoChoice
 import com.example.model.BrandingSlot
+import com.example.model.CustomColorScheme
 import com.example.model.HeaderEmblemChoice
 import com.example.model.HeroBackdropChoice
 import com.example.model.MascotSlotChoice
@@ -45,8 +46,37 @@ object SettingsBackupManager {
         "pdfEstimateTitle",
         "pdfProposalTitle",
         "headerEmblemChoice",
-        "brandLogoChoice"
+        "brandLogoChoice",
+        "customColorSchemes",
+        "activeCustomSchemeId"
     )
+
+    private val RECOGNIZED_SCHEME_KEYS = setOf(
+        "primaryHex",
+        "accentHex",
+        "backgroundHex",
+        "surfaceHex"
+    )
+
+    fun encodeColorSchemeJson(scheme: CustomColorScheme): String =
+        JSONObject().apply {
+            put("format", "thdr_color_scheme_v1")
+            put("scheme", PriceBookJsonCodec.encodeCustomColorScheme(scheme))
+        }.toString(2)
+
+    fun decodeColorSchemeFromStream(inputStream: InputStream): CustomColorScheme {
+        val rawBytes = readBoundedBytes(inputStream, 1024 * 1024)
+        val text = rawBytes.toString(Charsets.UTF_8).trim()
+        if (!text.startsWith("{")) {
+            throw IllegalArgumentException("Choose a valid .json color scheme file.")
+        }
+        val root = JSONObject(text)
+        val schemeObj = root.optJSONObject("scheme") ?: root
+        if (!RECOGNIZED_SCHEME_KEYS.any { schemeObj.has(it) }) {
+            throw IllegalArgumentException("Selected JSON file does not contain color scheme colors.")
+        }
+        return PriceBookJsonCodec.decodeCustomColorScheme(schemeObj)
+    }
 
     fun writeBackupZip(
         settings: AppSettings,

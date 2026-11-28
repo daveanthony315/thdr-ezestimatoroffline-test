@@ -14,6 +14,7 @@ import com.example.domain.PriceBookJsonCodec
 import com.example.domain.SettingsBackupManager
 import com.example.model.AppSettings
 import com.example.model.BrandingSlot
+import com.example.model.CustomColorScheme
 import com.example.model.CalcResultRow
 import com.example.model.CategoryMeta
 import com.example.model.Customer
@@ -634,6 +635,59 @@ class EstimatorViewModel(application: Application) : AndroidViewModel(applicatio
                 onError(msg)
             }
         }
+    }
+
+    fun exportColorSchemeToUri(
+        uri: Uri,
+        scheme: CustomColorScheme,
+        onResult: (String) -> Unit = {}
+    ) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            try {
+                val json = SettingsBackupManager.encodeColorSchemeJson(scheme)
+                withContext(Dispatchers.IO) {
+                    app.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: throw IllegalStateException("Could not open export file.")
+                }
+                val msg = "Exported color scheme \"${scheme.name}\""
+                _snackbarMessage.value = msg
+                onResult(msg)
+            } catch (e: Exception) {
+                val msg = "Scheme export failed: ${e.message ?: "unable to write file"}"
+                _snackbarMessage.value = msg
+                onResult(msg)
+            }
+        }
+    }
+
+    fun importColorSchemeFromUri(
+        uri: Uri,
+        onImported: (CustomColorScheme) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            try {
+                val imported = withContext(Dispatchers.IO) {
+                    app.contentResolver.openInputStream(uri)?.use { stream ->
+                        SettingsBackupManager.decodeColorSchemeFromStream(stream)
+                    } ?: throw IllegalStateException("Could not read selected file.")
+                }
+                val msg = "Imported color scheme \"${imported.name}\""
+                _snackbarMessage.value = msg
+                onImported(imported)
+            } catch (e: Exception) {
+                val msg = "Scheme upload failed: ${e.message ?: "invalid file"}"
+                _snackbarMessage.value = msg
+                onError(msg)
+            }
+        }
+    }
+
+    fun notifySettingsRefreshed() {
+        _snackbarMessage.value = "Refreshed saved settings & image previews"
     }
 
     private fun cleanupReplacedPath(oldPath: String, newPath: String) {
